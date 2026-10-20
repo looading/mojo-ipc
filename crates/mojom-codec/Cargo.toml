@@ -1,0 +1,12 @@
+[package]
+name = "mojom-codec"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+
+[package.metadata.mojo]
+chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+
+[dependencies]
+mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core" }
+parsing_attribute = { package = "mojom-derive", path = "../mojom-derive" }

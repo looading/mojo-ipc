@@ -1,0 +1,55 @@
+# Overlay target for Chromium bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd.
+# Install at //sdk/mojo_rs/native with scripts/build_native.py.
+
+import("//base/allocator/allocator.gni")
+
+config("public_headers") {
+  include_dirs = [ "include" ]
+}
+
+config("exports") {
+  if (is_mac) {
+    inputs = [ "exports_macos.txt" ]
+    ldflags = [ "-Wl,-exported_symbols_list," +
+                rebase_path("exports_macos.txt", root_build_dir) ]
+  } else if (is_linux) {
+    inputs = [ "exports_linux.map" ]
+    ldflags = [ "-Wl,--version-script=" +
+                rebase_path("exports_linux.map", root_build_dir) ]
+  }
+}
+
+shared_library("runtime") {
+  output_name = "mojo_rs_native"
+  sources = [
+    "include/mojo_rs_native.h",
+    "runtime.cc",
+  ]
+  defines = [ "MOJO_RS_NATIVE_IMPLEMENTATION" ]
+  configs += [ ":exports" ]
+  public_configs = [ ":public_headers" ]
+  deps = [
+    "//base",
+    "//mojo/core/embedder",
+    "//mojo/public/c/system",
+    "//mojo/public/cpp/platform",
+  ]
+
+  # Internal Chromium components must be folded into this final library.
+  # A component build would otherwise produce an SDK with undeclared DLLs.
+  assert(!is_component_build,
+         "The Mojo Rust SDK native runtime requires is_component_build=false")
+  assert(!use_allocator_shim && !use_partition_alloc_as_malloc,
+         "The SDK must not replace its Rust host's process-wide allocator")
+  assert(is_linux || is_mac || is_win,
+         "v1 supports Linux, macOS, and Windows desktop targets")
+}
+
+executable("runtime_smoke") {
+  testonly = true
+  sources = [ "tests/runtime_smoke.cc" ]
+  deps = [
+    ":runtime",
+    "//mojo/public/c/system:headers",
+  ]
+}

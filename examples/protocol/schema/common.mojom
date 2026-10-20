@@ -1,0 +1,15 @@
+module demo.types;
+
+enum MessageKind {
+  Text = 0,
+  Bytes = 1,
+  Binary = 1,
+};
+
+struct Record {
+  uint64 id;
+  string text;
+  array<uint8> data;
+  MessageKind kind;
+  string? note;
+};

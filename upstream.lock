@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "chromium_commit": "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd",
+  "sdk_abi_version": 1,
+  "source_url": "https://chromium.googlesource.com/chromium/src",
+  "notice": "All Chromium source files retain their original copyright and license notices."
+}
+

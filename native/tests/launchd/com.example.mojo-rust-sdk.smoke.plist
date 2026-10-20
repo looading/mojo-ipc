@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.mojo-rust-sdk.smoke</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/absolute/path/to/runtime_smoke</string>
+    <string>--named-server</string>
+    <string>com.example.mojo-rust-sdk.smoke</string>
+    <string>--peer-pid-file</string>
+    <string>/absolute/path/to/test-work/client.pid</string>
+  </array>
+  <key>MachServices</key>
+  <dict>
+    <key>com.example.mojo-rust-sdk.smoke</key>
+    <true/>
+  </dict>
+  <key>KeepAlive</key>
+  <false/>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/absolute/path/to/test-work/server.stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/absolute/path/to/test-work/server.stderr.log</string>
+</dict>
+</plist>

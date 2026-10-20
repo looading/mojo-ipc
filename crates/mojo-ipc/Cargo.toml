@@ -1,0 +1,18 @@
+[package]
+name = "mojo-ipc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+raw_ffi.workspace = true
+sequenced_task_runner.workspace = true
+c_mojo_api.workspace = true
+system.workspace = true
+mojom_value_parser_core.workspace = true
+mojom_value_parser.workspace = true
+bindings.workspace = true
+anyhow.workspace = true
+ordered-float.workspace = true
+

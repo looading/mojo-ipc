@@ -1,0 +1,14 @@
+module demo.echo;
+
+import "common.mojom";
+
+interface Observer {
+  OnEvent(string text);
+};
+
+interface Echo {
+  Ping(string text) => (string echoed);
+  RoundTrip(demo.types.Record record) => (demo.types.Record echoed);
+  Notify(string text);
+  SetObserver(pending_remote<Observer> observer);
+};

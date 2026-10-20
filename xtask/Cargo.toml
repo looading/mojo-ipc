@@ -1,0 +1,16 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde_json.workspace = true
+bindgen = "0.72"
+syn.workspace = true
+quote.workspace = true
+proc-macro2.workspace = true
+prettyplease = "0.2"
+

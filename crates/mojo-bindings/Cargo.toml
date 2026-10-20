@@ -1,0 +1,16 @@
+[package]
+name = "mojo-bindings"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+
+[package.metadata.mojo]
+chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+
+[dependencies]
+system = { package = "mojo-system", path = "../mojo-system" }
+mojom_value_parser = { package = "mojom-codec", path = "../mojom-codec" }
+mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core" }
+sequenced_task_runner = { package = "mojo-sequence", path = "../mojo-sequence" }
+anyhow = "1"
+bitflags = "2"

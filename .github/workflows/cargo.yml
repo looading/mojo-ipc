@@ -1,0 +1,65 @@
+name: Cargo and official Mojom
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargo:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.96.0 --profile minimal --component rustfmt
+      - name: Check all Cargo targets
+        run: cargo check --workspace --all-targets --locked
+      - name: Run pure Rust and official-generator tests
+        run: cargo test --workspace --all-targets --locked
+      - name: Official Python generator boundary tests
+        run: python -B tools/mojom/test_codegen.py
+      # A green job here does not certify the native Mojo runtime. Build and
+      # run native/scripts/build_native.py --smoke in a pinned Chromium checkout
+      # on each target, then run the real two-process Rust example separately.
+
+  windows-cross:
+    name: Link Windows Rust targets with cargo-xwin
+    runs-on: ubuntu-24.04
+    env:
+      MOJOM_PYTHON: python
+      XWIN_ARCH: x86_64
+      XWIN_VERSION: '17'
+      XWIN_CACHE_DIR: ${{ github.workspace }}/target/xwin-cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Rust and Windows standard library
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.96.0'
+          targets: x86_64-pc-windows-msvc
+      - name: Install LLVM and cargo-xwin
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld llvm
+          python -m pip install cargo-xwin==0.23.1
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.XWIN_CACHE_DIR }}
+          key: xwin-${{ runner.os }}-0.23.1-vs17-x86_64-v1
+      - name: Compile and link all Windows Rust targets
+        run: cargo xwin build --workspace --all-targets --locked --target x86_64-pc-windows-msvc
+      # This job links Rust Windows PE files, including the typed Echo example.
+      # The Mojo Core DLL is built separately with Chromium GN. No Windows
+      # programs run here; native.yml retains the real Windows runtime gates.

@@ -1,0 +1,17 @@
+[package]
+name = "mojom-derive"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+
+[package.metadata.mojo]
+chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full"] }
+proc-macro-crate = "3"

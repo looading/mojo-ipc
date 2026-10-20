@@ -1,0 +1,12 @@
+[package]
+name = "mojo-example-protocol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ipc = { package = "mojo-ipc", path = "../../crates/mojo-ipc" }
+
+[build-dependencies]
+mojom-build = { path = "../../crates/mojom-build" }

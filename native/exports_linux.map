@@ -1,0 +1,4 @@
+MOJO_RS_NATIVE_1 {
+  global: MojoRsGetApiV1;
+  local: *;
+};

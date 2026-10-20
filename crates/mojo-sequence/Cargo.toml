@@ -1,0 +1,10 @@
+[package]
+name = "mojo-sequence"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+raw_ffi.workspace = true
+

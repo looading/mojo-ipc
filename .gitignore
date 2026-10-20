@@ -1,0 +1,7 @@
+/target/
+**/__pycache__/
+*.pyc
+/native/out/
+/native/work/
+/dist/
+

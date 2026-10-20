@@ -1,0 +1,14 @@
+[package]
+name = "mojo-c-api"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+
+[package.metadata.mojo]
+chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+
+[dependencies]
+raw_ffi = { package = "mojo-sys", path = "../mojo-sys" }
+bitflags = "2"
+static_assertions = "1"
+strum = { version = "0.28", features = ["derive"] }

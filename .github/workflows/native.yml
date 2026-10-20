@@ -1,0 +1,273 @@
+name: Native Mojo acceptance (manual, self-hosted)
+
+# Configuration only until a human dispatches it on provisioned runners.
+# No push/PR trigger, GitHub-hosted machine, or runner provisioning is used.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native ${{ matrix.target }}
+    runs-on: ${{ matrix.runner_labels }}
+    timeout-minutes: 360
+    concurrency:
+      group: mojo-native-${{ github.repository }}-${{ matrix.target }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner_labels: [self-hosted, Linux, X64]
+            system: Linux
+            gn_os: linux
+            cpu: x64
+            library: libmojo_rs_native.so
+          - target: x86_64-apple-darwin
+            runner_labels: [self-hosted, macOS, X64]
+            system: Darwin
+            gn_os: mac
+            cpu: x64
+            library: libmojo_rs_native.dylib
+          - target: aarch64-apple-darwin
+            runner_labels: [self-hosted, macOS, ARM64]
+            system: Darwin
+            gn_os: mac
+            cpu: arm64
+            library: libmojo_rs_native.dylib
+          - target: x86_64-pc-windows-msvc
+            runner_labels: [self-hosted, Windows, X64]
+            system: Windows
+            gn_os: win
+            cpu: x64
+            library: mojo_rs_native.dll
+    env:
+      NATIVE_TARGET: ${{ matrix.target }}
+      NATIVE_EXPECTED_SYSTEM: ${{ matrix.system }}
+      NATIVE_GN_OS: ${{ matrix.gn_os }}
+      NATIVE_CPU: ${{ matrix.cpu }}
+      NATIVE_LIBRARY_NAME: ${{ matrix.library }}
+      PYTHONUTF8: '1'
+    defaults:
+      run:
+        shell: python
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.cpu }}
+
+      - name: Keep the preconfigured Chromium checkout outside the Actions workspace
+        run: |
+          import os
+          from pathlib import Path
+          value = os.environ.get("CHROMIUM_SRC", "")
+          if not value or not Path(value).is_absolute():
+              raise SystemExit("set the runner's CHROMIUM_SRC to an absolute pinned Chromium src checkout before dispatch")
+          checkout = Path(value).resolve()
+          workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+          if checkout == workspace or workspace in checkout.parents or checkout in workspace.parents:
+              raise SystemExit("CHROMIUM_SRC and GITHUB_WORKSPACE must be disjoint directories; checkout must not clean or replace the configured Chromium tree")
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Require a complete pinned Chromium checkout and depot_tools
+        run: |
+          import os
+          from pathlib import Path
+          import platform
+          import shutil
+          import subprocess
+          import sys
+
+          pin = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+          errors = []
+          expected_system = os.environ["NATIVE_EXPECTED_SYSTEM"]
+          if platform.system() != expected_system:
+              errors.append(f"runner OS mismatch: need {expected_system}, got {platform.system()}")
+          cpu = {"x86_64": "x64", "amd64": "x64", "arm64": "arm64", "aarch64": "arm64"}.get(platform.machine().lower())
+          if cpu != os.environ["NATIVE_CPU"]:
+              errors.append(f"runner CPU mismatch: need {os.environ['NATIVE_CPU']}, got {platform.machine()}")
+          if sys.version_info[:2] != (3, 12):
+              errors.append(f"Python 3.12 is required, got {sys.version}")
+          value = os.environ.get("CHROMIUM_SRC", "")
+          checkout = Path(value) if value else None
+          if not checkout or not checkout.is_absolute():
+              errors.append("set the runner's CHROMIUM_SRC to the absolute path of a complete pinned Chromium src checkout")
+          else:
+              checkout = checkout.resolve()
+              for relative in [".gn", "DEPS", "base/BUILD.gn", "mojo/core/BUILD.gn", "build/config/BUILDCONFIG.gn"]:
+                  if not (checkout / relative).is_file():
+                      errors.append(f"incomplete Chromium checkout: missing {checkout / relative}")
+              compiler = "clang-cl.exe" if expected_system == "Windows" else "clang"
+              compiler = checkout / "third_party/llvm-build/Release+Asserts/bin" / compiler
+              if not compiler.is_file():
+                  errors.append(f"Chromium's downloaded compiler is missing: {compiler}; finish the normal Chromium dependency setup first")
+          for executable in ["git", "gclient", "gn"]:
+              if not shutil.which(executable):
+                  errors.append(f"{executable} is missing from PATH; configure the runner with Chromium depot_tools")
+          if not (shutil.which("autoninja") or shutil.which("ninja")):
+              errors.append("autoninja/ninja is missing from PATH")
+          if checkout and checkout.is_dir() and shutil.which("git"):
+              result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=checkout, text=True, capture_output=True)
+              if result.returncode or result.stdout.strip() != pin:
+                  errors.append(f"Chromium revision mismatch: expected {pin}, got {result.stdout.strip() or result.stderr.strip()}")
+          if errors:
+              raise SystemExit("Native runner prerequisites failed:\n- " + "\n- ".join(errors))
+          artifact = (Path(os.environ["GITHUB_WORKSPACE"]) / "dist" / os.environ["NATIVE_TARGET"]).resolve()
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              for key, value in {
+                  "CHROMIUM_SRC": str(checkout),
+                  "MOJOM_PYTHON": sys.executable,
+                  "MOJO_NATIVE_ARTIFACT_DIR": str(artifact),
+                  "MOJO_NATIVE_BUILD_DIR": str(checkout / "out" / f"mojo-rs-{os.environ['NATIVE_GN_OS']}-{os.environ['NATIVE_CPU']}"),
+                  "MOJO_RUNTIME_LIBRARY": str(artifact / os.environ["NATIVE_LIBRARY_NAME"]),
+              }.items():
+                  if "\n" in value or "\r" in value:
+                      raise SystemExit(f"unsupported newline in runner environment value: {key}")
+                  stream.write(f"{key}={value}\n")
+
+      - name: Install pinned Rust 1.96.0
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.96.0'
+          targets: ${{ matrix.target }}
+          components: rustfmt
+
+      - name: Check and test all Cargo targets
+        run: |
+          import os
+          import subprocess
+          for operation in ["check", "test"]:
+              subprocess.run([
+                  "cargo", "+1.96.0", operation, "--workspace", "--all-targets",
+                  "--locked", "--target", os.environ["NATIVE_TARGET"],
+              ], check=True)
+
+      - name: Test the real official Mojom generator
+        run: |
+          import subprocess
+          import sys
+          subprocess.run([sys.executable, "-B", "tools/mojom/test_codegen.py"], check=True)
+
+      - name: Build the native library and run native smoke
+        run: |
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          artifact = Path(os.environ["MOJO_NATIVE_ARTIFACT_DIR"])
+          subprocess.run([
+              sys.executable, "native/scripts/build_native.py",
+              "--chromium-src", os.environ["CHROMIUM_SRC"],
+              "--out", os.environ["MOJO_NATIVE_BUILD_DIR"],
+              "--target-cpu", os.environ["NATIVE_CPU"],
+              "--smoke", "--artifact-dir", str(artifact),
+          ], check=True)
+          manifest = json.loads((artifact / "native-manifest.json").read_text(encoding="utf-8"))
+          expected = {
+              "chromium_commit": "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd",
+              "abi_version": 1,
+              "os": os.environ["NATIVE_GN_OS"],
+              "cpu": os.environ["NATIVE_CPU"],
+              "library": os.environ["NATIVE_LIBRARY_NAME"],
+              "native_smoke_passed": True,
+          }
+          for key, value in expected.items():
+              if manifest.get(key) != value:
+                  raise SystemExit(f"native manifest mismatch for {key}: {manifest.get(key)!r} != {value!r}")
+          library = Path(os.environ["MOJO_RUNTIME_LIBRARY"])
+          if not library.is_file() or hashlib.sha256(library.read_bytes()).hexdigest() != manifest.get("sha256"):
+              raise SystemExit("native library is missing or its checksum does not match the manifest")
+
+      - name: Run the independent-process named-channel fixture
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          artifact = Path(os.environ["MOJO_NATIVE_ARTIFACT_DIR"])
+          executable = Path(os.environ["MOJO_NATIVE_BUILD_DIR"]) / (
+              "runtime_smoke.exe" if os.environ["NATIVE_EXPECTED_SYSTEM"] == "Windows" else "runtime_smoke"
+          )
+          result = subprocess.run([
+              sys.executable, "native/scripts/named_smoke.py",
+              "--executable", str(executable),
+              "--work-dir", str(artifact / "named-smoke"),
+          ], text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=120)
+          sys.stdout.write(result.stdout)
+          sys.stderr.write(result.stderr)
+          (artifact / "named-smoke-driver.log").write_text(result.stdout + result.stderr, encoding="utf-8")
+          if result.returncode:
+              raise SystemExit(f"independent-process named-channel fixture failed: exit {result.returncode}")
+
+      - name: Run the real Rust parent-child typed IPC example
+        run: |
+          import datetime
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import subprocess
+          import sys
+
+          artifact = Path(os.environ["MOJO_NATIVE_ARTIFACT_DIR"])
+          command = [
+              "cargo", "+1.96.0", "run", "--locked", "--target", os.environ["NATIVE_TARGET"],
+              "-p", "mojo-example-protocol", "--example", "echo",
+          ]
+          result = subprocess.run(command, text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=180)
+          sys.stdout.write(result.stdout)
+          sys.stderr.write(result.stderr)
+          (artifact / "typed-echo.log").write_text(result.stdout + result.stderr, encoding="utf-8")
+          if result.returncode:
+              raise SystemExit(f"typed parent-child IPC example failed: exit {result.returncode}")
+          receipt = {
+              "target": os.environ["NATIVE_TARGET"],
+              "sdk_commit": os.environ["GITHUB_SHA"],
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "recorded_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "runner_system": platform.system(),
+              "runner_machine": platform.machine(),
+              "python": sys.version.split()[0],
+              "rust": "1.96.0",
+              "cargo_check_passed": True,
+              "cargo_tests_passed": True,
+              "official_mojom_boundary_tests_passed": True,
+              "native_smoke_passed": True,
+              "independent_named_process_fixture_passed": True,
+              "typed_parent_child_example_passed": True,
+              "native_manifest": "native-manifest.json",
+              "runtime_dependency_audit": "not performed by this workflow; required before redistribution",
+          }
+          (artifact / "acceptance-manifest.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+
+      - name: Upload the tested native artifact and manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: mojo-native-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/${{ matrix.target }}/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure diagnostics when available
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mojo-native-diagnostics-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist/${{ matrix.target }}/named-smoke/
+            dist/${{ matrix.target }}/named-smoke-driver.log
+            dist/${{ matrix.target }}/typed-echo.log
+          if-no-files-found: ignore
+          retention-days: 14

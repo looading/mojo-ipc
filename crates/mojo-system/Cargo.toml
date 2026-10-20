@@ -1,0 +1,13 @@
+[package]
+name = "mojo-system"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+
+[package.metadata.mojo]
+chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+
+[dependencies]
+c_mojo_api = { package = "mojo-c-api", path = "../mojo-c-api" }
+bitflags = "2"
+bytemuck = { version = "1", features = ["derive"] }
