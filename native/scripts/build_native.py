@@ -53,7 +53,10 @@ def main() -> int:
     parser.add_argument("--target-cpu", choices=("x64", "arm64"),
                         help="target CPU (default: host CPU, or x64 for cross-OS Windows builds)")
     parser.add_argument("--artifact-dir", type=Path)
+    parser.add_argument("--jobs", type=int, help="maximum local Ninja parallelism")
     args = parser.parse_args()
+    if args.jobs is not None and args.jobs < 1:
+        parser.error("--jobs must be positive")
     extra_gn_args = ((args.gn_args_file.expanduser().read_text(encoding="utf-8") + "\n")
                      if args.gn_args_file else "") + args.gn_args
 
@@ -133,7 +136,8 @@ def main() -> int:
                     "--root-target=" + root_target,
                     "--root-pattern=" + root_target,
                     "--fail-on-unused-args"], cwd=checkout, check=True)
-    subprocess.run([ninja, "-C", str(out), root_target.removeprefix("//")],
+    parallelism = ["-j", str(args.jobs)] if args.jobs is not None else []
+    subprocess.run([ninja, "-C", str(out), *parallelism, root_target.removeprefix("//")],
                    cwd=checkout, check=True)
     smoke_passed = False
     if args.smoke:

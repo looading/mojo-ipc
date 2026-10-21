@@ -1,136 +1,113 @@
-name: Native Mojo acceptance (manual, self-hosted)
+name: Native Mojo build and release
 
-# Configuration only until a human dispatches it on provisioned runners.
-# No push/PR trigger, GitHub-hosted machine, or runner provisioning is used.
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a Release (dispatch on a matching version tag)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
+concurrency:
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  version:
+    name: Validate version and release tooling
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require version tags to match Cargo
+        id: version
+        env:
+          PUBLISH_REQUESTED: ${{ inputs.publish || false }}
+        shell: python
+        run: |
+          import os
+          import sys
+          sys.path.insert(0, "native/scripts")
+          from package_native import version
+          value = version()
+          ref = os.environ["GITHUB_REF"]
+          if ref.startswith("refs/tags/") and ref != "refs/tags/v" + value:
+              raise SystemExit("release tag must match workspace.package.version: v" + value)
+          if os.environ["PUBLISH_REQUESTED"] == "true" and not ref.startswith("refs/tags/"):
+              raise SystemExit("publish requires dispatching on the matching version tag")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+              stream.write(f"version={value}\n")
+      - name: Test native release tooling without Chromium
+        run: python -B -m unittest discover -s native/scripts -p 'test_release.py' -v
+
   native:
     name: Native ${{ matrix.target }}
-    runs-on: ${{ matrix.runner_labels }}
+    needs: version
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
-    concurrency:
-      group: mojo-native-${{ github.repository }}-${{ matrix.target }}
-      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            runner_labels: [self-hosted, Linux, X64]
+            runner: ubuntu-24.04
             system: Linux
             gn_os: linux
             cpu: x64
             library: libmojo_rs_native.so
+            gn_args: 'use_glib=false use_siso=false use_remoteexec=false symbol_level=0'
           - target: x86_64-apple-darwin
-            runner_labels: [self-hosted, macOS, X64]
+            runner: macos-15-intel
             system: Darwin
             gn_os: mac
             cpu: x64
             library: libmojo_rs_native.dylib
+            gn_args: 'use_system_xcode=true use_siso=false use_remoteexec=false symbol_level=0'
           - target: aarch64-apple-darwin
-            runner_labels: [self-hosted, macOS, ARM64]
+            runner: macos-15
             system: Darwin
             gn_os: mac
             cpu: arm64
             library: libmojo_rs_native.dylib
+            gn_args: 'use_system_xcode=true use_siso=false use_remoteexec=false symbol_level=0'
           - target: x86_64-pc-windows-msvc
-            runner_labels: [self-hosted, Windows, X64]
+            runner: windows-2025-vs2026
             system: Windows
             gn_os: win
             cpu: x64
             library: mojo_rs_native.dll
+            gn_args: 'use_siso=false use_remoteexec=false symbol_level=0'
     env:
       NATIVE_TARGET: ${{ matrix.target }}
       NATIVE_EXPECTED_SYSTEM: ${{ matrix.system }}
       NATIVE_GN_OS: ${{ matrix.gn_os }}
       NATIVE_CPU: ${{ matrix.cpu }}
       NATIVE_LIBRARY_NAME: ${{ matrix.library }}
+      NATIVE_GN_ARGS: ${{ matrix.gn_args }}
+      MOJOM_PYTHON: python
       PYTHONUTF8: '1'
     defaults:
       run:
         shell: python
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           architecture: ${{ matrix.cpu }}
-
-      - name: Keep the preconfigured Chromium checkout outside the Actions workspace
-        run: |
-          import os
-          from pathlib import Path
-          value = os.environ.get("CHROMIUM_SRC", "")
-          if not value or not Path(value).is_absolute():
-              raise SystemExit("set the runner's CHROMIUM_SRC to an absolute pinned Chromium src checkout before dispatch")
-          checkout = Path(value).resolve()
-          workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
-          if checkout == workspace or workspace in checkout.parents or checkout in workspace.parents:
-              raise SystemExit("CHROMIUM_SRC and GITHUB_WORKSPACE must be disjoint directories; checkout must not clean or replace the configured Chromium tree")
-
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Require a complete pinned Chromium checkout and depot_tools
-        run: |
-          import os
-          from pathlib import Path
-          import platform
-          import shutil
-          import subprocess
-          import sys
-
-          pin = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
-          errors = []
-          expected_system = os.environ["NATIVE_EXPECTED_SYSTEM"]
-          if platform.system() != expected_system:
-              errors.append(f"runner OS mismatch: need {expected_system}, got {platform.system()}")
-          cpu = {"x86_64": "x64", "amd64": "x64", "arm64": "arm64", "aarch64": "arm64"}.get(platform.machine().lower())
-          if cpu != os.environ["NATIVE_CPU"]:
-              errors.append(f"runner CPU mismatch: need {os.environ['NATIVE_CPU']}, got {platform.machine()}")
-          if sys.version_info[:2] != (3, 12):
-              errors.append(f"Python 3.12 is required, got {sys.version}")
-          value = os.environ.get("CHROMIUM_SRC", "")
-          checkout = Path(value) if value else None
-          if not checkout or not checkout.is_absolute():
-              errors.append("set the runner's CHROMIUM_SRC to the absolute path of a complete pinned Chromium src checkout")
-          else:
-              checkout = checkout.resolve()
-              for relative in [".gn", "DEPS", "base/BUILD.gn", "mojo/core/BUILD.gn", "build/config/BUILDCONFIG.gn"]:
-                  if not (checkout / relative).is_file():
-                      errors.append(f"incomplete Chromium checkout: missing {checkout / relative}")
-              compiler = "clang-cl.exe" if expected_system == "Windows" else "clang"
-              compiler = checkout / "third_party/llvm-build/Release+Asserts/bin" / compiler
-              if not compiler.is_file():
-                  errors.append(f"Chromium's downloaded compiler is missing: {compiler}; finish the normal Chromium dependency setup first")
-          for executable in ["git", "gclient", "gn"]:
-              if not shutil.which(executable):
-                  errors.append(f"{executable} is missing from PATH; configure the runner with Chromium depot_tools")
-          if not (shutil.which("autoninja") or shutil.which("ninja")):
-              errors.append("autoninja/ninja is missing from PATH")
-          if checkout and checkout.is_dir() and shutil.which("git"):
-              result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=checkout, text=True, capture_output=True)
-              if result.returncode or result.stdout.strip() != pin:
-                  errors.append(f"Chromium revision mismatch: expected {pin}, got {result.stdout.strip() or result.stderr.strip()}")
-          if errors:
-              raise SystemExit("Native runner prerequisites failed:\n- " + "\n- ".join(errors))
-          artifact = (Path(os.environ["GITHUB_WORKSPACE"]) / "dist" / os.environ["NATIVE_TARGET"]).resolve()
-          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
-              for key, value in {
-                  "CHROMIUM_SRC": str(checkout),
-                  "MOJOM_PYTHON": sys.executable,
-                  "MOJO_NATIVE_ARTIFACT_DIR": str(artifact),
-                  "MOJO_NATIVE_BUILD_DIR": str(checkout / "out" / f"mojo-rs-{os.environ['NATIVE_GN_OS']}-{os.environ['NATIVE_CPU']}"),
-                  "MOJO_RUNTIME_LIBRARY": str(artifact / os.environ["NATIVE_LIBRARY_NAME"]),
-              }.items():
-                  if "\n" in value or "\r" in value:
-                      raise SystemExit(f"unsupported newline in runner environment value: {key}")
-                  stream.write(f"{key}={value}\n")
 
       - name: Install pinned Rust 1.96.0
         uses: dtolnay/rust-toolchain@stable
@@ -155,6 +132,48 @@ jobs:
           import sys
           subprocess.run([sys.executable, "-B", "tools/mojom/test_codegen.py"], check=True)
 
+      - name: Install the pinned Windows SDK and debugging tools
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sdkRoot = "${env:ProgramFiles(x86)}\Windows Kits\10"
+          $header = "$sdkRoot\Include\10.0.28000.0\um\Windows.h"
+          if (-not (Test-Path $header) -or -not (Test-Path "$sdkRoot\Debuggers\x64\dbghelp.dll")) {
+            $installer = Join-Path $env:RUNNER_TEMP 'winsdksetup.exe'
+            Invoke-WebRequest 'https://download.microsoft.com/download/78b533c3-6724-4e28-a984-b9fa93265781/KIT_BUNDLE_WINDOWSSDK_MEDIACREATION/winsdksetup.exe' -OutFile $installer
+            $expected = 'e9f1bde566381355e594e2f90daf4f714eb5c7ef2c45c501ce236afe2abea300'
+            if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
+              throw 'Windows SDK installer checksum mismatch'
+            }
+            $process = Start-Process $installer -ArgumentList '/quiet /norestart /features +' -Wait -PassThru
+            if ($process.ExitCode -notin @(0, 3010)) { throw "Windows SDK install failed: $($process.ExitCode)" }
+          }
+          if (-not (Test-Path $header)) { throw 'Windows SDK 10.0.28000.0 headers are missing' }
+          if (-not (Test-Path "$sdkRoot\Debuggers\x64\dbghelp.dll")) { throw 'SDK Debugging Tools are missing' }
+
+      - name: Provision pinned Chromium on this fresh hosted runner
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          subprocess.run([sys.executable, "native/scripts/prepare_hosted.py", "--root",
+                          str(Path(os.environ["RUNNER_TEMP"]) / "mojo-chromium")], check=True)
+
+      - name: Verify standalone license scanning with the pinned GN
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          subdir, executable = {
+              "Linux": ("linux64", "gn"), "Darwin": ("mac", "gn"), "Windows": ("win", "gn.exe"),
+          }[os.environ["NATIVE_EXPECTED_SYSTEM"]]
+          env = dict(os.environ, MOJO_TEST_GN=str(Path(os.environ["CHROMIUM_SRC"]) / "buildtools" / subdir / executable))
+          subprocess.run([sys.executable, "-B", "native/scripts/test_release.py",
+                          "HostedTests.test_license_scan_preserves_standalone_graph_root", "-v"], env=env, check=True)
+
       - name: Build the native library and run native smoke
         run: |
           import hashlib
@@ -170,6 +189,7 @@ jobs:
               "--chromium-src", os.environ["CHROMIUM_SRC"],
               "--out", os.environ["MOJO_NATIVE_BUILD_DIR"],
               "--target-cpu", os.environ["NATIVE_CPU"],
+              "--jobs", "2", "--gn-args", os.environ["NATIVE_GN_ARGS"],
               "--smoke", "--artifact-dir", str(artifact),
           ], check=True)
           manifest = json.loads((artifact / "native-manifest.json").read_text(encoding="utf-8"))
@@ -248,15 +268,31 @@ jobs:
               "independent_named_process_fixture_passed": True,
               "typed_parent_child_example_passed": True,
               "native_manifest": "native-manifest.json",
-              "runtime_dependency_audit": "not performed by this workflow; required before redistribution",
+              "runtime_dependency_audit": "pending package audit",
           }
           (artifact / "acceptance-manifest.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
 
-      - name: Upload the tested native artifact and manifests
+      - name: Audit exports and dependencies, collect licenses, and package
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          subprocess.run([
+              sys.executable, "native/scripts/package_native.py",
+              "--artifact-dir", os.environ["MOJO_NATIVE_ARTIFACT_DIR"],
+              "--chromium-src", os.environ["CHROMIUM_SRC"],
+              "--out", os.environ["MOJO_NATIVE_BUILD_DIR"],
+              "--target", os.environ["NATIVE_TARGET"],
+              "--output-dir", str(Path("dist/packages") / os.environ["NATIVE_TARGET"]),
+          ], check=True)
+
+      - name: Upload versioned native packages
         uses: actions/upload-artifact@v4
         with:
-          name: mojo-native-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: dist/${{ matrix.target }}/
+          name: mojo-native-package-${{ matrix.target }}
+          overwrite: true
+          path: dist/packages/${{ matrix.target }}/
           if-no-files-found: error
           retention-days: 14
 
@@ -271,3 +307,27 @@ jobs:
             dist/${{ matrix.target }}/typed-echo.log
           if-no-files-found: ignore
           retention-days: 14
+
+  release:
+    name: Publish the complete native release
+    needs: [version, native]
+    if: startsWith(github.ref, 'refs/tags/v') && (github.event_name == 'push' || inputs.publish)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mojo-native-package-*
+          path: dist/release
+          merge-multiple: true
+      - name: Verify all four packages and publish their Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python native/scripts/release_native.py --package-dir dist/release --tag "$GITHUB_REF_NAME"

@@ -9,17 +9,22 @@ the conversation on 2026-10-21.
 
 ## Build environment
 
-Reuse the existing `native.yml` matrix and its self-hosted runners: Linux x64,
-macOS x64, macOS arm64, and Windows x64. Each runner requires a complete Chromium
-checkout at `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`, its platform SDKs,
-depot_tools, and native inspection tools. Runner provisioning remains separate
-from the SDK release workflow. An unavailable runner will leave a job queued.
+The user selected GitHub-hosted runners after reviewing the original proposal.
+Use `ubuntu-24.04`, `macos-15-intel`, `macos-15`, and
+`windows-2025-vs2026` for Linux x64, macOS x64, macOS arm64, and Windows x64.
+Provision Chromium at `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd` and the
+matching depot_tools revision on each fresh runner. Use shallow dependency
+checkouts and Chromium's `small` configuration without excluding required
+source dependencies. Install Linux build dependencies and the pinned Windows
+SDK where the runner image does not already provide it. macOS uses the installed
+system Xcode. All producer inputs are outside the SDK workspace.
 
-The alternatives are to provision Chromium on GitHub-hosted runners for every
-release, which requires a separate solution for checkout size and platform
-toolchains, or publish Actions artifacts alone, which would retain the existing
-temporary-download workflow. Reusing the native producers preserves their
-current environment contracts and adds persistent versioned downloads.
+Reclaim disk space only on disposable GitHub-hosted machines, preserving the
+selected Xcode, Visual Studio, and active Python. Bound Ninja parallelism and
+disable debug symbols to limit memory and disk consumption. A cold hosted build
+must work without an existing Chromium checkout or cache; whole-checkout cache
+availability must not be a prerequisite. Source synchronization and native
+compilation remain subject to the hosted job's disk and six-hour time limits.
 
 ## Workflow and release contract
 
@@ -35,7 +40,7 @@ current environment contracts and adds persistent versioned downloads.
   license notices with the pinned checkout's licensing tooling.
 - Package only the runtime library, C header, provenance/acceptance/audit
   manifests, and license notices. Exclude build trees and diagnostic files that
-  may be left over from previous self-hosted runs.
+  are not part of the consumer package.
 - Name each archive `mojo-native-<version>-<rust-target>.tar.gz`. Include the SDK
   version and commit, Chromium pin, ABI version, target, library hash, and
   completed acceptance gates in the package metadata.

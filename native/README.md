@@ -22,6 +22,12 @@ audit exports, dependencies and host allocator behavior after dynamic loading.
 
 ## Build in an existing Chromium checkout
 
+For clean GitHub-hosted builds and versioned prebuilt downloads, see
+[the native release workflow](../.github/NATIVE_WORKFLOW.md). That workflow
+provisions the producer environment, runs acceptance, audits dependencies and
+exports, collects license notices, and publishes the complete platform matrix.
+The local builder below continues to use an explicitly provided checkout.
+
 Install and initialize Chromium's normal development dependencies and
 `depot_tools` separately. This script never clones Chromium, resets its revision,
 runs `gclient sync`, or downloads toolchains on its own.
@@ -51,7 +57,8 @@ selected root is recorded in an exported artifact's manifest.
 
 `--gn-args` supplies explicit additional GN configuration; `--gn-args-file`
 loads saved arguments before those command-line additions. `--out` chooses the
-output directory. `--target-os linux|mac|win` defaults to the host OS;
+output directory. `--jobs N` limits local Ninja parallelism; when omitted the
+existing Ninja/autoninja default is retained. `--target-os linux|mac|win` defaults to the host OS;
 `--target-cpu x64` or `--target-cpu arm64` selects the CPU. macOS supports both,
 while release v1 Linux/Windows target x64. CPU defaults to the host CPU, or x64
 for a cross-OS Windows build. Set these through the dedicated flags; assignments
