@@ -117,6 +117,18 @@ class HostedTests(unittest.TestCase):
 
 
 class AuditTests(unittest.TestCase):
+    def test_macos_self_install_ids_preserve_dependency_rejections(self):
+        for self_id in ("./libmojo_rs_native.dylib", "@rpath/libmojo_rs_native.dylib"):
+            for target, arch in (("x86_64-apple-darwin", "x86_64"), ("aarch64-apple-darwin", "arm64")):
+                with self.subTest(self_id=self_id, target=target):
+                    text = MAC.format(arch=arch).replace("@rpath/libmojo_rs_native.dylib", self_id)
+                    audit = package.audit_output(target, text)
+                    self.assertEqual(audit["dependencies"], ["/usr/lib/libSystem.B.dylib"])
+                    for dependency in (self_id, "./libbase.dylib", "@rpath/libbase.dylib", "/opt/homebrew/lib/libbase.dylib"):
+                        extra = f"\n    {dependency} (compatibility version 1.0.0, current version 1.0.0)\n"
+                        with self.assertRaisesRegex(RuntimeError, "dependencies"):
+                            package.audit_output(target, text + extra)
+
     def test_all_supported_architectures_and_import_formats(self):
         for target in package.TARGETS:
             with self.subTest(target=target):
@@ -144,11 +156,14 @@ class AuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "fixture.c").write_text("void *MojoRsGetApiV1(void) { return 0; }\n")
-            library = root / "libmojo_rs_native.dylib"
-            subprocess.run(["cc", "-dynamiclib", str(root / "fixture.c"), "-o", str(library),
-                            "-Wl,-install_name,@rpath/libmojo_rs_native.dylib"], check=True)
-            audit, _ = package.audit_library(target, library)
-            self.assertTrue(audit["default_malloc_zone_preserved"])
+            for number, install_id in enumerate(("@rpath/libmojo_rs_native.dylib", "./libmojo_rs_native.dylib")):
+                directory = root / str(number)
+                directory.mkdir()
+                library = directory / "libmojo_rs_native.dylib"
+                subprocess.run(["cc", "-dynamiclib", str(root / "fixture.c"), "-o", str(library),
+                                "-Wl,-install_name," + install_id], check=True)
+                audit, _ = package.audit_library(target, library)
+                self.assertTrue(audit["default_malloc_zone_preserved"])
 
 
 class PackageTests(unittest.TestCase):
@@ -181,7 +196,7 @@ class PackageTests(unittest.TestCase):
         (artifact / "private-build.log").write_text("not for distribution")
         return artifact
 
-    def build_package(self, target, artifact=None):
+    def build_package(self, target, artifact=None, *, sdk_root=package.ROOT):
         artifact = artifact or self.artifact(target)
 
         def generate_notices(command, **kwargs):
@@ -191,7 +206,25 @@ class PackageTests(unittest.TestCase):
         with patch.object(package, "inspect", return_value=package.COMMIT), \
              patch.object(package, "audit_library", return_value=audit_fixture(target)), \
              patch.object(package.subprocess, "run", side_effect=generate_notices):
-            return package.create_package(artifact, target, self.chromium, self.root / "gn-out", self.output)
+            return package.create_package(artifact, target, self.chromium, self.root / "gn-out", self.output,
+                                          sdk_root=sdk_root)
+
+    def test_separate_sdk_checkout_controls_package_version_header_and_license(self):
+        sdk = self.root / "sdk"
+        (sdk / "native/include").mkdir(parents=True)
+        (sdk / "Cargo.toml").write_text('[workspace.package]\nversion = "9.8.7"\n')
+        (sdk / "LICENSE").write_text("SDK checkout license\n")
+        (sdk / "native/include/mojo_rs_native.h").write_bytes(b"SDK checkout header\n")
+        target = next(iter(package.TARGETS))
+        artifact = self.artifact(target)
+        (artifact / "mojo_rs_native.h").write_bytes(b"SDK checkout header\n")
+        archive = self.build_package(target, artifact, sdk_root=sdk)
+        self.assertTrue(archive.name.startswith("mojo-native-9.8.7-"))
+        with tarfile.open(archive) as stream:
+            members = {Path(m.name).name: stream.extractfile(m).read() for m in stream.getmembers()}
+        self.assertEqual(json.loads(members["package-manifest.json"])["sdk_version"], "9.8.7")
+        self.assertEqual(members["mojo_rs_native.h"], b"SDK checkout header\n")
+        self.assertEqual(members["LICENSE"], b"SDK checkout license\n")
 
     def build_matrix(self):
         for target in package.TARGETS:

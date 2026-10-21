@@ -28,6 +28,9 @@ API, Mojom wire format, Chromium pin and native C ABI v1 remain unchanged from
   runner image's older default SDK.
 - Add the native build directory to the smoke processes' dynamic-library search
   path so Linux/macOS acceptance can load the newly built shared library.
+- Recognize the macOS runtime's relative self install ID during dependency
+  auditing, and use tested workflow-commit packaging tools with the immutable
+  SDK checkout's version, header and license when rebuilding an existing tag.
 
 ## 0.2.1 (2026-10-21)
 

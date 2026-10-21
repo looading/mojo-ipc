@@ -59,7 +59,10 @@ gh workflow run native.yml --ref main -f release_tag=v0.2.2 -f publish=true
 
 Preflight checks the SDK tag's Cargo version and resolves its source commit.
 Every producer checks out that commit. Acceptance records preserve both the SDK
-commit and the separate workflow commit/ref. Before publication the tag is
+commit and the separate workflow commit/ref. Release tooling is checked out
+separately at the workflow commit and tested during preflight. The packager's
+`--sdk-root` keeps its version, C header and license tied to the validated SDK
+checkout, allowing packaging fixes without modifying the SDK tag. Before publication the tag is
 resolved again; a moved tag stops publication. A branch dispatch without an
 explicit matching tag cannot publish. This mode does not move existing tags.
 

@@ -35,6 +35,12 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ inputs.release_tag || github.ref }}
+      - name: Check out the workflow's release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .release-tools
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -62,7 +68,7 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
               stream.write(f"version={value}\ncommit={commit}\ntag={tag}\npublish={str(publish).lower()}\n")
       - name: Test native release tooling without Chromium
-        run: python -B -m unittest discover -s native/scripts -p 'test_release.py' -v
+        run: python -B -m unittest discover -s .release-tools/native/scripts -p 'test_release.py' -v
 
   native:
     name: Native ${{ matrix.target }}
@@ -119,6 +125,12 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.version.outputs.commit }}
+      - name: Check out the workflow's release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .release-tools
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -224,7 +236,7 @@ jobs:
               "Linux": ("linux64", "gn"), "Darwin": ("mac", "gn"), "Windows": ("win", "gn.exe"),
           }[os.environ["NATIVE_EXPECTED_SYSTEM"]]
           env = dict(os.environ, MOJO_TEST_GN=str(Path(os.environ["CHROMIUM_SRC"]) / "buildtools" / subdir / executable))
-          subprocess.run([sys.executable, "-B", "native/scripts/test_release.py",
+          subprocess.run([sys.executable, "-B", ".release-tools/native/scripts/test_release.py",
                           "HostedTests.test_license_scan_preserves_standalone_graph_root", "-v"], env=env, check=True)
 
       - name: Use pinned GN and Ninja without depot_tools Python launchers
@@ -368,7 +380,8 @@ jobs:
           import subprocess
           import sys
           subprocess.run([
-              sys.executable, "native/scripts/package_native.py",
+              sys.executable, ".release-tools/native/scripts/package_native.py",
+              "--sdk-root", str(Path.cwd()),
               "--artifact-dir", os.environ["MOJO_NATIVE_ARTIFACT_DIR"],
               "--chromium-src", os.environ["CHROMIUM_SRC"],
               "--out", os.environ["MOJO_NATIVE_BUILD_DIR"],
