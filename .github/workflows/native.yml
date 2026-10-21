@@ -13,6 +13,10 @@ on:
         description: Existing version tag to build with this workflow (for example v0.2.2)
         type: string
         default: ''
+      artifact_run_id:
+        description: Reuse all four verified packages from this completed native workflow run
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -49,9 +53,11 @@ jobs:
         env:
           PUBLISH_REQUESTED: ${{ inputs.publish || false }}
           REQUESTED_TAG: ${{ inputs.release_tag }}
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
         shell: python
         run: |
           import os
+          import re
           import subprocess
           import sys
           sys.path.insert(0, "native/scripts")
@@ -64,6 +70,9 @@ jobs:
           publish = os.environ["PUBLISH_REQUESTED"] == "true" or (os.environ["GITHUB_EVENT_NAME"] == "push" and bool(tag))
           if publish and not tag:
               raise SystemExit("publish requires an explicit matching version tag")
+          producer = os.environ["ARTIFACT_RUN_ID"]
+          if producer and (not re.fullmatch(r"[0-9]+", producer) or not publish):
+              raise SystemExit("artifact reuse requires a numeric native run ID and publish=true")
           commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
               stream.write(f"version={value}\ncommit={commit}\ntag={tag}\npublish={str(publish).lower()}\n")
@@ -72,6 +81,7 @@ jobs:
 
   native:
     name: Native ${{ matrix.target }}
+    if: ${{ !inputs.artifact_run_id }}
     needs: version
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
@@ -413,20 +423,53 @@ jobs:
   release:
     name: Publish the complete native release
     needs: [version, native]
-    if: needs.version.outputs.publish == 'true'
+    if: >-
+      always() && !cancelled() && needs.version.result == 'success' && needs.version.outputs.publish == 'true' &&
+      (needs.native.result == 'success' || (inputs.artifact_run_id != '' && needs.native.result == 'skipped'))
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           ref: ${{ needs.version.outputs.commit }}
+      - name: Check out the workflow's release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .release-tools
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Validate the native package producer
+        id: producer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCER_RUN_ID: ${{ inputs.artifact_run_id || github.run_id }}
+          REUSED_RUN_ID: ${{ inputs.artifact_run_id }}
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+          import sys
+          sys.path.insert(0, ".release-tools/native/scripts")
+          from release_native import validate_producer
+          repository = os.environ["GITHUB_REPOSITORY"]
+          run_id = os.environ["PRODUCER_RUN_ID"]
+          run = json.loads(subprocess.check_output([
+              "gh", "api", f"repos/{repository}/actions/runs/{run_id}",
+          ], text=True))
+          commit, attempt = validate_producer(run, repository, run_id, completed=bool(os.environ["REUSED_RUN_ID"]))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+              stream.write(f"commit={commit}\nattempt={attempt}\n")
       - uses: actions/download-artifact@v4
         with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id || github.run_id }}
           pattern: mojo-native-package-*
           path: dist/release
           merge-multiple: true
@@ -435,9 +478,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SDK_COMMIT: ${{ needs.version.outputs.commit }}
           RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          PRODUCER_RUN_ID: ${{ inputs.artifact_run_id || github.run_id }}
+          PRODUCER_COMMIT: ${{ steps.producer.outputs.commit }}
+          PRODUCER_ATTEMPT: ${{ steps.producer.outputs.attempt }}
         shell: python
         run: |
           import os
+          from pathlib import Path
           import subprocess
           import sys
           tag = os.environ["RELEASE_TAG"]
@@ -450,6 +497,9 @@ jobs:
               raise SystemExit("release tag moved after source validation; refusing to publish")
           # The publishing script runs against the validated SDK tag checkout.
           # Its provenance is separate from a manually selected workflow ref.
-          env = dict(os.environ, GITHUB_SHA=commit, GITHUB_REF="refs/tags/" + tag)
-          subprocess.run([sys.executable, "native/scripts/release_native.py",
+          env = dict(os.environ, GITHUB_SHA=commit, GITHUB_REF="refs/tags/" + tag,
+                     GITHUB_RUN_ID=os.environ["PRODUCER_RUN_ID"],
+                     GITHUB_RUN_ATTEMPT=os.environ["PRODUCER_ATTEMPT"])
+          subprocess.run([sys.executable, ".release-tools/native/scripts/release_native.py",
+                          "--sdk-root", str(Path.cwd()), "--workflow-commit", os.environ["PRODUCER_COMMIT"],
                           "--package-dir", "dist/release", "--tag", tag], env=env, check=True)

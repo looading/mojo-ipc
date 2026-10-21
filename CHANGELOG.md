@@ -31,6 +31,8 @@ API, Mojom wire format, Chromium pin and native C ABI v1 remain unchanged from
 - Recognize the macOS runtime's relative self install ID during dependency
   auditing, and use tested workflow-commit packaging tools with the immutable
   SDK checkout's version, header and license when rebuilding an existing tag.
+- Verify and publish draft Releases by numeric ID, and allow publication to
+  reuse the complete verified package set from a completed native workflow run.
 
 ## 0.2.1 (2026-10-21)
 

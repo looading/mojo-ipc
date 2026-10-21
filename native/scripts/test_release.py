@@ -192,6 +192,7 @@ class PackageTests(unittest.TestCase):
         }))
         receipt = {gate: True for gate in package.GATES}
         receipt.update(target=target, sdk_commit=SDK_COMMIT, github_run_id="17", github_run_attempt="1")
+        receipt["workflow_commit"] = "c" * 40
         (artifact / "acceptance-manifest.json").write_text(json.dumps(receipt))
         (artifact / "private-build.log").write_text("not for distribution")
         return artifact
@@ -225,6 +226,19 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(json.loads(members["package-manifest.json"])["sdk_version"], "9.8.7")
         self.assertEqual(members["mojo_rs_native.h"], b"SDK checkout header\n")
         self.assertEqual(members["LICENSE"], b"SDK checkout license\n")
+        for other in package.TARGETS:
+            if other != target:
+                other_artifact = self.artifact(other)
+                (other_artifact / "mojo_rs_native.h").write_bytes(b"SDK checkout header\n")
+                self.build_package(other, other_artifact, sdk_root=sdk)
+        self.assertEqual(len(release.verify_packages(self.output, "v9.8.7", SDK_COMMIT, sdk_root=sdk)), 5)
+
+    def test_release_checks_the_producer_workflow_commit(self):
+        self.build_matrix()
+        self.assertEqual(len(release.verify_packages(self.output, "v" + package.version(), SDK_COMMIT,
+                                                     workflow_commit="c" * 40)), 5)
+        with self.assertRaisesRegex(RuntimeError, "producer workflow commit"):
+            release.verify_packages(self.output, "v" + package.version(), SDK_COMMIT, workflow_commit="d" * 40)
 
     def build_matrix(self):
         for target in package.TARGETS:
@@ -294,6 +308,31 @@ class PackageTests(unittest.TestCase):
             release.verify_packages(self.output, "v" + package.version(), SDK_COMMIT)
 
 
+class ProducerTests(unittest.TestCase):
+    def setUp(self):
+        self.run = {"id": 17, "repository": {"full_name": "test/repo"},
+                    "head_repository": {"full_name": "test/repo"},
+                    "path": ".github/workflows/native.yml", "event": "workflow_dispatch",
+                    "status": "completed", "conclusion": "failure", "head_sha": "c" * 40, "run_attempt": 2}
+
+    def test_completed_producer_can_have_a_failed_publication(self):
+        self.assertEqual(release.validate_producer(self.run, "test/repo", "17", completed=True), ("c" * 40, "2"))
+
+    def test_reused_run_must_be_complete_but_current_run_can_be_running(self):
+        self.run["status"] = "in_progress"
+        release.validate_producer(self.run, "test/repo", "17", completed=False)
+        with self.assertRaisesRegex(RuntimeError, "not completed"):
+            release.validate_producer(self.run, "test/repo", "17", completed=True)
+
+    def test_foreign_fork_pr_wrong_workflow_and_invalid_provenance_are_rejected(self):
+        for key, value in (("repository", {"full_name": "other/repo"}),
+                           ("head_repository", {"full_name": "fork/repo"}),
+                           ("event", "pull_request"), ("path", ".github/workflows/other.yml"),
+                           ("id", 18), ("head_sha", "invalid"), ("run_attempt", 0), ("run_attempt", True)):
+            with self.subTest(key=key, value=value), self.assertRaises(RuntimeError):
+                release.validate_producer({**self.run, key: value}, "test/repo", "17", completed=True)
+
+
 class PublishTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -305,6 +344,24 @@ class PublishTests(unittest.TestCase):
         env.start()
         self.addCleanup(env.stop)
 
+    def record(self, *, draft=True, matching=False, identifier=7):
+        assets = [{"name": self.file.name, "digest": "sha256:" + package.digest(self.file.read_bytes())}] if matching else []
+        return {"id": identifier, "tag_name": self.tag, "draft": draft, "assets": assets}
+
+    def server(self, *, matching=True, already_uploaded=False):
+        self.calls = []
+
+        def request(endpoint, *, paginate=False, payload=None):
+            self.calls.append((endpoint, paginate, payload))
+            self.assertNotIn("/tags/", endpoint)
+            if paginate:
+                return [[self.record(matching=already_uploaded)]]
+            self.assertEqual(endpoint, "repos/test/repo/releases/7")
+            if payload is not None:
+                return self.record(draft=False, matching=True)
+            return self.record(matching=matching)
+        return request
+
     def test_upload_failure_leaves_draft_unpublished(self):
         commands = []
 
@@ -312,33 +369,71 @@ class PublishTests(unittest.TestCase):
             commands.append(command)
             if command[:3] == ["gh", "release", "upload"]:
                 raise subprocess.CalledProcessError(1, command)
-            return subprocess.CompletedProcess(command, 0, json.dumps({"draft": True}), "")
+            return subprocess.CompletedProcess(command, 0)
 
-        with patch.object(release.subprocess, "run", side_effect=run), self.assertRaises(subprocess.CalledProcessError):
+        with patch.object(release, "api", side_effect=self.server()), \
+             patch.object(release.subprocess, "run", side_effect=run), self.assertRaises(subprocess.CalledProcessError):
             release.publish([self.file], self.tag, SDK_COMMIT)
-        self.assertFalse(any(c[:3] == ["gh", "release", "edit"] for c in commands))
+        self.assertFalse(any(payload is not None for _, _, payload in self.calls))
 
     def test_existing_public_release_cannot_be_overwritten(self):
-        result = subprocess.CompletedProcess([], 0, json.dumps({"draft": False, "assets": []}), "")
-        with patch.object(release.subprocess, "run", return_value=result) as run, self.assertRaisesRegex(RuntimeError, "refusing"):
+        with patch.object(release, "api", return_value=[[self.record(draft=False)]]) as request, \
+             patch.object(release.subprocess, "run") as run, self.assertRaisesRegex(RuntimeError, "refusing"):
             release.publish([self.file], self.tag, SDK_COMMIT)
-        self.assertEqual(run.call_count, 1)
+        self.assertEqual(request.call_count, 1)
+        run.assert_not_called()
 
     def test_upload_is_verified_before_publishing(self):
-        result = subprocess.CompletedProcess([], 0, json.dumps({"draft": True}), "")
-        assets = {"assets": [{"name": self.file.name, "digest": "sha256:" + package.digest(self.file.read_bytes())}]}
-        with patch.object(release.subprocess, "run", return_value=result) as run, \
-             patch.object(release.subprocess, "check_output", return_value=json.dumps(assets)):
+        with patch.object(release, "api", side_effect=self.server()), patch.object(release.subprocess, "run") as run:
             release.publish([self.file], self.tag, SDK_COMMIT)
-        self.assertEqual(run.call_args_list[-1].args[0][:3], ["gh", "release", "edit"])
+        self.assertEqual(run.call_args.args[0][:3], ["gh", "release", "upload"])
+        self.assertEqual(self.calls[-2], ("repos/test/repo/releases/7", False, None))
+        self.assertEqual(self.calls[-1], ("repos/test/repo/releases/7", False, {"draft": False, "prerelease": False}))
 
     def test_mismatching_server_assets_leave_draft_unpublished(self):
-        result = subprocess.CompletedProcess([], 0, json.dumps({"draft": True}), "")
-        with patch.object(release.subprocess, "run", return_value=result) as run, \
-             patch.object(release.subprocess, "check_output", return_value='{"assets": []}'), \
+        with patch.object(release, "api", side_effect=self.server(matching=False)), \
+             patch.object(release.subprocess, "run"), \
              self.assertRaisesRegex(RuntimeError, "uploaded release assets"):
             release.publish([self.file], self.tag, SDK_COMMIT)
-        self.assertFalse(any(c.args[0][:3] == ["gh", "release", "edit"] for c in run.call_args_list))
+        self.assertFalse(any(payload is not None for _, _, payload in self.calls))
+
+    def test_existing_verified_draft_is_published_by_id_without_reupload(self):
+        with patch.object(release, "api", side_effect=self.server(already_uploaded=True)), \
+             patch.object(release.subprocess, "run") as run:
+            release.publish([self.file], self.tag, SDK_COMMIT)
+        run.assert_not_called()
+        self.assertEqual(self.calls[-1][2], {"draft": False, "prerelease": False})
+
+    def test_multiple_matching_drafts_are_rejected(self):
+        with patch.object(release, "api", return_value=[[self.record(), self.record(identifier=8)]]), \
+             patch.object(release.subprocess, "run") as run, self.assertRaisesRegex(RuntimeError, "ambiguous"):
+            release.publish([self.file], self.tag, SDK_COMMIT)
+        run.assert_not_called()
+
+    def test_missing_draft_is_created_with_tag_verification_then_queried_by_id(self):
+        responses = [[[]], [[self.record()]], self.record(matching=True), self.record(draft=False, matching=True)]
+        with patch.object(release, "api", side_effect=responses) as request, \
+             patch.object(release.subprocess, "run") as run:
+            release.publish([self.file], self.tag, SDK_COMMIT)
+        self.assertEqual(run.call_args_list[0].args[0][:3], ["gh", "release", "create"])
+        self.assertIn("--verify-tag", run.call_args_list[0].args[0])
+        self.assertEqual(request.call_args_list[-1].args[0], "repos/test/repo/releases/7")
+
+    def test_prerelease_flag_comes_from_the_validated_sdk_tag(self):
+        self.tag = "v9.8.7-rc.1"
+        with patch.dict(os.environ, {"GITHUB_REF": "refs/tags/" + self.tag}), \
+             patch.object(release, "api", side_effect=self.server(already_uploaded=True)):
+            release.publish([self.file], self.tag, SDK_COMMIT)
+        self.assertTrue(self.calls[-1][2]["prerelease"])
+
+    def test_patch_api_uses_a_structured_json_boolean_body(self):
+        def request(command, **kwargs):
+            self.assertIn("PATCH", command)
+            body = Path(command[command.index("--input") + 1])
+            self.assertEqual(json.loads(body.read_text()), {"draft": False})
+            return '{"draft": false}'
+        with patch.object(release.subprocess, "check_output", side_effect=request):
+            self.assertEqual(release.api("repos/test/repo/releases/7", payload={"draft": False}), {"draft": False})
 
 
 if __name__ == "__main__":
