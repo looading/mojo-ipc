@@ -1,5 +1,25 @@
 # Changelog
 
+All version changes are maintained here, with the newest version first.
+The README contains project setup and usage instructions and links to this file.
+
+## 0.2.2 (2026-10-21)
+
+This release adds native library build and distribution automation. The Rust
+API, Mojom wire format, Chromium pin and native C ABI v1 remain unchanged from
+`0.2.1`. Cargo crate publication is separate from native GitHub Releases.
+
+- Build Linux x86_64 GNU, macOS x86_64/arm64, and Windows x86_64 MSVC libraries
+  on fresh GitHub-hosted runners, provisioning the pinned Chromium checkout,
+  depot_tools and required platform tools.
+- Run Cargo/Mojom checks, native smoke, the independent-process named-channel
+  fixture, and the Rust typed parent/child example before packaging.
+- Audit native architecture, exports and runtime dependencies; distribute the
+  runtime library, C header, build/acceptance manifests and dependency licenses
+  in versioned archives with SHA-256 checksums.
+- Publish the complete four-target set through a version-tag-triggered GitHub
+  Release. Support manual acceptance builds and safe retries of draft uploads.
+
 ## 0.2.1 (2026-10-21)
 
 This patch retains Rust source compatibility with `0.2.0`, the Mojom wire
@@ -14,7 +34,8 @@ format, Chromium pin and native C ABI v1. Keep SDK component versions aligned.
 - Fix empty native message buffers: a null pointer with zero bytes is safely
   represented as an empty Rust slice; non-empty buffers still require a valid
   pointer.
-- Add six real macOS x86_64 message-read native tests. The four existing routing
+- Add six real macOS x86_64 message-read native tests, covering zero/multiple
+  handles and shared/mutable reads. The four existing routing
   tests and the trap and message-parts native tests also passed separately.
   These correctness checks do not establish a measured latency improvement.
 - Complete 56 case-interleaved ABBA/BAAB trials on macOS x86_64. The 64 KiB
@@ -85,6 +106,41 @@ reference.
   exhaustive matches and AST equality/hash/order need to account for the new
   representation. Legacy `Array(UInt8...)` remains encodable and convertible.
   This is not a published 0.1.0 patch or a claim of Rust source compatibility.
+
+### 性能验证（macOS x86_64）
+
+`0.2.0` primary-dispatch 轮的 macOS x86_64 正式八轮中，64 KiB typed RTT 的 run p50 中位数为
+275.6115 → 246.0965 µs，run p99 中位数为 481.6085 → 408.1355 µs。
+但 p99 在 ABBA 组下降 28.49%，在 BAAB 组上升 25.79%；最后一轮 after 和
+全部下降项均保留。每轮前后记录的 CPU_Speed_Limit 也发生变化，端点观测不足以
+确定原因。独立补充 BAAB、数值控制与本轮 after 有限稳定性运行均已分别核验，
+详见 `VALIDATION.md`。
+
+### 尾延迟对照摘要
+
+以下为 macOS x86_64 的独立 run 统计量中位数变化，After 相对 Before；延迟负值
+表示更低，吞吐正值表示更高。正式八轮、各 block 与补充 BAAB 分别计算，不池化。
+
+| 64 KiB 对照 | RTT p50 | RTT p99 | RPC/s |
+| --- | --- | --- | --- |
+| 正式八轮 typed | −10.71% | −15.26% | +12.62% |
+| 正式 ABBA typed | −13.93% | −28.49% | +20.22% |
+| 正式 BAAB typed | +22.64% | +25.79% | −13.80% |
+| 独立补充 BAAB raw | −3.17% | −2.48% | +4.06% |
+| 独立补充 BAAB typed | −14.80% | −26.65% | +16.81% |
+
+补测每侧仅两轮，typed p50 的 before 为 533.300/298.479 µs、after 为
+443.595/265.091 µs；p99 同样有明显跨轮漂移。固定 30 秒间隔不证明环境噪声已
+消除，补测改善也不覆盖正式 BAAB 的回退。完整 48 指标、全部每轮 N/spread、
+两个 block、19 项全八轮下降及其他 scope 下降记录保存在
+[可移植基线](benchmarks/baselines/macos-x64-tail-latency-20261021.json)；这些观测
+不是裸 Mojo Core 指标、显著性结论或其他平台的原生验收。
+
+独立数值控制的 16 次运行仍保留 9 条 scope 下降记录，其中全八轮 3 条；15 个
+codec/derive 源文件哈希相同也不能据此认定全部差异为噪声。after 稳定性运行完成
+30.0015 秒、1,403,739 次请求，pending 为 0，并通过 100 次进程循环及 64 个
+未完成请求的异常断连。104 个 worker 均回收，FD/Mach names 为 4/38；RSS 从
+32,239,616 增至 49,942,528 字节，churn 10→100 又增长 24 KiB。有限通过不证明无泄漏。
 
 ## 0.1.0
 

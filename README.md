@@ -10,37 +10,11 @@
 Windows x64 已在 macOS 上完成官方 Core DLL 交叉编译，以及 cargo-xwin 的 Rust
 完整编译和链接；Windows 运行验收仍待执行。Linux、macOS arm64 已通过 Rust 编译检查，
 原生构建和运行仍待验收。
-当前源码的 Cargo 包版本为 `0.2.2`。已接入 GitHub Actions 四平台预构建和 Release
-分发流程，首次远端构建与发布仍待执行。原生库下载和使用方式见
-[预构建库说明](.github/NATIVE_WORKFLOW.md)。
+当前源码的 Cargo 包版本为 `0.2.2`。原生库由 GitHub Actions 构建并通过 Release 分发，
+四平台构建和验收结果见 [GitHub Actions](https://github.com/looading/mojo-ipc/actions/workflows/native.yml)。
+下载和使用方式见 [预构建库说明](.github/NATIVE_WORKFLOW.md)。
 
-`0.2.2` 增加原生库自动构建和分发，Rust API、Mojom wire 格式、Chromium pin
-及原生 ABI 与 `0.2.1` 保持一致。Cargo 包发布与原生库 Release 分开执行。
-
-`0.2.1` 保留 `0.2.0` 的 Rust API、Mojom wire 格式、Chromium pin 和原生 ABI。
-接收时复用提取 handles 的原生查询结果，省去重复的 `GetMessageData`；
-primary 快捷派发用具体 owned job 省去临时 `Box`，既有 FIFO、锁释放及 fallback 条件保持。
-同时修复合法空 payload 的原生空指针处理，覆盖零/多个 handles 和共享/可变读取。
-本轮 56 次对照中，64 KiB typed p99 的 ABBA / BAAB 中位数分别下降 1.01% / 8.41%，
-但 0 B、64 B、1 MiB 仍有 p99 回退，不能视为已全面解决尾延迟。
-完整结果与全部不利项见 [逐 case 对照](benchmarks/P99_BAAB_OPTIMIZATION.md)。
-
-`0.2.0` 新增紧凑数组的公开 AST 变体，低层 `MojomValue` 的穷尽匹配和相等、哈希、
-排序处理需适配，不能视为 `0.1.0` 的 Rust 源码兼容更新。codec、derive、生成器和运行时
-组件应一起升级到 `0.2.0` 并重新生成协议；公开命名 AST 与自定义 Context 转换的默认语义
-保留。Mojom wire 格式、上游 Chromium pin 和原生 C ABI v1 保持不变，历史 `0.1.0`
-registry 对照用于验证 wire 兼容。
-
-`0.2.0` 还加入栈上消息头编码和单事件 trap arm 路径，保留公开 owned-message 和 `arm()`
-接口。它们的性能与尾延迟效果须以冻结产物的独立对照结果为准。
-
-合格的 primary-only 接口现在可在已经异步投递的 watcher task 末尾处理消息，省去
-额外的 endpoint task；用户 handler 执行前会释放 router/watcher 的回调锁。绑定
-sequence、同 pipe FIFO 和异步收包边界保留，不会在发送调用栈内同步执行 handler。
-associated 接口及不满足条件的路径继续使用原来的排队投递，路由一旦降级就不恢复
-该快捷路径。任意其他 runner task 与 handler 之间的旧相对顺序可能改变，不能再
-依赖额外的第二个 task turn。新 routing 的四项原生语义测试已在 macOS x86_64
-通过；正式性能对照已完成八轮，尾延迟仍存在顺序分组分歧，不能视为已解决 p99 回退。
+版本变更统一维护在 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 工程组成
 
@@ -85,7 +59,6 @@ cargo test --workspace --all-targets --locked
 `.github/workflows/native.yml` 使用 GitHub-hosted runner，从固定 Chromium 源码和工具链
 开始构建四个原生目标。手动运行可下载构建包；推送匹配 Cargo 版本的 tag 后，四平台
 验收全部通过才发布 GitHub Release。完整流程见 `.github/NATIVE_WORKFLOW.md`。
-两个 workflow 均未在远端执行。
 
 ## 性能与稳定性基准
 
@@ -102,13 +75,6 @@ python3 benchmarks/run.py --stress-seconds 60 \
 需要 Python 3.10+；默认解释器较旧时同时设置 `MOJOM_PYTHON`。
 结果包含真实完成数、RTT 分位数、应用 payload 吞吐、资源采样和运行环境。
 统计口径、各平台资源采集限制和长时运行参数见 `benchmarks/README.md`。
-
-`0.2.0` primary-dispatch 轮的 macOS x86_64 正式八轮中，64 KiB typed RTT 的 run p50 中位数为
-275.6115 → 246.0965 µs，run p99 中位数为 481.6085 → 408.1355 µs。
-但 p99 在 ABBA 组下降 28.49%，在 BAAB 组上升 25.79%；最后一轮 after 和
-全部下降项均保留。每轮前后记录的 CPU_Speed_Limit 也发生变化，端点观测不足以
-确定原因。独立补充 BAAB、数值控制与本轮 after 有限稳定性运行均已分别核验，
-详见 `VALIDATION.md`。
 
 ## 从 macOS/Linux 交叉构建 Windows Rust 目标
 
@@ -250,29 +216,3 @@ Linux 使用 `.so`，Windows 使用 `mojo_rs_native.dll`；PowerShell 可用
   Linux/macOS arm64 原生目标、并发/崩溃/长时间运行测试仍待完成。
 
 实际已执行的检查与未执行项见 `VALIDATION.md`。
-
-## 0.2.0 尾延迟对照摘要（历史记录）
-
-以下为 macOS x86_64 的独立 run 统计量中位数变化，After 相对 Before；延迟负值
-表示更低，吞吐正值表示更高。正式八轮、各 block 与补充 BAAB 分别计算，不池化。
-
-| 64 KiB 对照 | RTT p50 | RTT p99 | RPC/s |
-| --- | --- | --- | --- |
-| 正式八轮 typed | −10.71% | −15.26% | +12.62% |
-| 正式 ABBA typed | −13.93% | −28.49% | +20.22% |
-| 正式 BAAB typed | +22.64% | +25.79% | −13.80% |
-| 独立补充 BAAB raw | −3.17% | −2.48% | +4.06% |
-| 独立补充 BAAB typed | −14.80% | −26.65% | +16.81% |
-
-补测每侧仅两轮，typed p50 的 before 为 533.300/298.479 µs、after 为
-443.595/265.091 µs；p99 同样有明显跨轮漂移。固定 30 秒间隔不证明环境噪声已
-消除，补测改善也不覆盖正式 BAAB 的回退。完整 48 指标、全部每轮 N/spread、
-两个 block、19 项全八轮下降及其他 scope 下降记录保存在
-[可移植基线](benchmarks/baselines/macos-x64-tail-latency-20261021.json)；这些观测
-不是裸 Mojo Core 指标、显著性结论或其他平台的原生验收。
-
-独立数值控制的 16 次运行仍保留 9 条 scope 下降记录，其中全八轮 3 条；15 个
-codec/derive 源文件哈希相同也不能据此认定全部差异为噪声。after 稳定性运行完成
-30.0015 秒、1,403,739 次请求，pending 为 0，并通过 100 次进程循环及 64 个
-未完成请求的异常断连。104 个 worker 均回收，FD/Mach names 为 4/38；RSS 从
-32,239,616 增至 49,942,528 字节，churn 10→100 又增长 24 KiB。有限通过不证明无泄漏。
