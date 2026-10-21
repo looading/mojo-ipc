@@ -19,6 +19,10 @@ API, Mojom wire format, Chromium pin and native C ABI v1 remain unchanged from
   in versioned archives with SHA-256 checksums.
 - Publish the complete four-target set through a version-tag-triggered GitHub
   Release. Support manual acceptance builds and safe retries of draft uploads.
+- Use the pinned GN/Ninja executables directly in hosted builds, avoiding
+  depot_tools Python launchers that may not have a bootstrapped interpreter.
+  Allow an existing SDK tag to be rebuilt with a corrected workflow while
+  retaining its source commit and recording the workflow commit separately.
 
 ## 0.2.1 (2026-10-21)
 

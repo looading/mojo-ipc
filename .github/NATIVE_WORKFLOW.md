@@ -28,8 +28,8 @@ gh workflow run native.yml --ref main
 
 Push a new `v<workspace.package.version>` tag containing this workflow and the
 release source. Version preflight runs before provisioning any native producer.
-All four targets must pass before the publishing job starts. Branch dispatches
-cannot publish a Release. The workflow uses its built-in `GITHUB_TOKEN`; only
+All four targets must pass before the publishing job starts. Publishing requires
+an explicitly selected matching version tag. The workflow uses its built-in `GITHUB_TOKEN`; only
 the publishing job receives `contents: write`.
 
 For example, after preparing the SDK source and its internal Cargo versions for
@@ -49,6 +49,19 @@ A manual dispatch on a matching version tag can also publish:
 ```sh
 gh workflow run native.yml --ref v0.2.2 -f publish=true
 ```
+
+To rebuild an existing SDK tag with a corrected workflow from `main`, select
+`main` under **Run workflow**, set `release_tag` to `v0.2.2` and enable `publish`:
+
+```sh
+gh workflow run native.yml --ref main -f release_tag=v0.2.2 -f publish=true
+```
+
+Preflight checks the SDK tag's Cargo version and resolves its source commit.
+Every producer checks out that commit. Acceptance records preserve both the SDK
+commit and the separate workflow commit/ref. Before publication the tag is
+resolved again; a moved tag stops publication. A branch dispatch without an
+explicit matching tag cannot publish. This mode does not move existing tags.
 
 The publishing job verifies the complete target set, every archive checksum,
 all packaged member hashes, and acceptance provenance. It uploads four archives
@@ -82,7 +95,11 @@ The SDK is obtained from the
 [official Windows SDK downloads](https://learn.microsoft.com/en-us/windows/apps/windows-sdk/downloads).
 
 Native compilation uses `--jobs 2`, disables debug symbols, and uses local Ninja
-without remote execution. Linux also uses `use_glib=false` to avoid requiring
+without remote execution. The workflow copies the pinned GN and Ninja binaries
+to an ephemeral tool directory at the front of `PATH`. For compatibility with
+older SDK builders, the Ninja executable has an `autoninja` alias. This avoids
+depot_tools' uninitialized Python launchers while preserving depot_tools for
+other build actions. Linux also uses `use_glib=false` to avoid requiring
 GLib/GObject in consumer hosts. The cold source/toolchain checkout is still large.
 Provisioning reports available disk space and requires at least 25 GiB free
 after cleanup; every native job has the GitHub-hosted six-hour timeout. There is
