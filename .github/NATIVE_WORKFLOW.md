@@ -102,7 +102,10 @@ without remote execution. The workflow copies the pinned GN and Ninja binaries
 to an ephemeral tool directory at the front of `PATH`. For compatibility with
 older SDK builders, the Ninja executable has an `autoninja` alias. This avoids
 depot_tools' uninitialized Python launchers while preserving depot_tools for
-other build actions. Linux also uses `use_glib=false` to avoid requiring
+other build actions. Before native smoke execution, the workflow adds the build
+directory to `LD_LIBRARY_PATH` on Linux or `DYLD_LIBRARY_PATH` on macOS, preserving
+existing entries. The smoke executables can then load the adjacent shared library
+without depending on a component-build RPATH. Linux also uses `use_glib=false` to avoid requiring
 GLib/GObject in consumer hosts. The cold source/toolchain checkout is still large.
 Provisioning reports available disk space and requires at least 25 GiB free
 after cleanup; every native job has the GitHub-hosted six-hour timeout. There is

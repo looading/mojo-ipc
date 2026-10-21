@@ -251,6 +251,16 @@ jobs:
           with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as stream:
               stream.write(str(tools) + "\n")
 
+      - name: Set the native smoke runtime search path
+        if: runner.os != 'Windows'
+        run: |
+          import os
+          variable = {"Linux": "LD_LIBRARY_PATH", "Darwin": "DYLD_LIBRARY_PATH"}[os.environ["NATIVE_EXPECTED_SYSTEM"]]
+          paths = [os.environ["MOJO_NATIVE_BUILD_DIR"]]
+          paths.extend(path for path in os.environ.get(variable, "").split(os.pathsep) if path)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"{variable}={os.pathsep.join(paths)}\n")
+
       - name: Build the native library and run native smoke
         run: |
           import hashlib

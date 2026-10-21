@@ -26,6 +26,8 @@ API, Mojom wire format, Chromium pin and native C ABI v1 remain unchanged from
 - Select an installed Xcode SDK containing Chromium's required DarwinFoundation
   module maps before provisioning a macOS producer, instead of relying on the
   runner image's older default SDK.
+- Add the native build directory to the smoke processes' dynamic-library search
+  path so Linux/macOS acceptance can load the newly built shared library.
 
 ## 0.2.1 (2026-10-21)
 
