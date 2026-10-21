@@ -195,7 +195,7 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "mojo-bindings"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -208,7 +208,7 @@ dependencies = [
 
 [[package]]
 name = "mojo-c-api"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bitflags",
  "mojo-sys",
@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "mojo-example-protocol"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "mojo-ipc",
  "mojom-build",
@@ -226,7 +226,7 @@ dependencies = [
 
 [[package]]
 name = "mojo-ipc"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "mojo-bindings",
@@ -241,7 +241,7 @@ dependencies = [
 
 [[package]]
 name = "mojo-ipc-bench"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "mojo-ipc",
@@ -251,21 +251,21 @@ dependencies = [
 
 [[package]]
 name = "mojo-sequence"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "mojo-sys",
 ]
 
 [[package]]
 name = "mojo-sys"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "libloading",
 ]
 
 [[package]]
 name = "mojo-system"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -274,14 +274,14 @@ dependencies = [
 
 [[package]]
 name = "mojom-build"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "mojom-codec"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "mojom-codec-core",
  "mojom-derive",
@@ -289,7 +289,7 @@ dependencies = [
 
 [[package]]
 name = "mojom-codec-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "itertools 0.14.0",
@@ -300,7 +300,7 @@ dependencies = [
 
 [[package]]
 name = "mojom-derive"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "bindgen",

@@ -13,10 +13,10 @@ readme = "README.md"
 chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
 
 [dependencies]
-system = { package = "mojo-system", path = "../mojo-system", version = "=0.2.1" }
-mojom_value_parser = { package = "mojom-codec", path = "../mojom-codec", version = "=0.2.1" }
-mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core", version = "=0.2.1" }
-sequenced_task_runner = { package = "mojo-sequence", path = "../mojo-sequence", version = "=0.2.1" }
+system = { package = "mojo-system", path = "../mojo-system", version = "=0.2.2" }
+mojom_value_parser = { package = "mojom-codec", path = "../mojom-codec", version = "=0.2.2" }
+mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core", version = "=0.2.2" }
+sequenced_task_runner = { package = "mojo-sequence", path = "../mojo-sequence", version = "=0.2.2" }
 anyhow = "1"
 bitflags = "2"
 

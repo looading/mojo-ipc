@@ -13,7 +13,7 @@ readme = "README.md"
 chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
 
 [dependencies]
-raw_ffi = { package = "mojo-sys", path = "../mojo-sys", version = "=0.2.1" }
+raw_ffi = { package = "mojo-sys", path = "../mojo-sys", version = "=0.2.2" }
 bitflags = "2"
 static_assertions = "1"
 strum = { version = "0.28", features = ["derive"] }

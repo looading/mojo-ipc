@@ -10,9 +10,12 @@
 Windows x64 已在 macOS 上完成官方 Core DLL 交叉编译，以及 cargo-xwin 的 Rust
 完整编译和链接；Windows 运行验收仍待执行。Linux、macOS arm64 已通过 Rust 编译检查，
 原生构建和运行仍待验收。
-当前源码的 Cargo 包版本为 `0.2.1`。已接入 GitHub Actions 四平台预构建和 Release
+当前源码的 Cargo 包版本为 `0.2.2`。已接入 GitHub Actions 四平台预构建和 Release
 分发流程，首次远端构建与发布仍待执行。原生库下载和使用方式见
 [预构建库说明](.github/NATIVE_WORKFLOW.md)。
+
+`0.2.2` 增加原生库自动构建和分发，Rust API、Mojom wire 格式、Chromium pin
+及原生 ABI 与 `0.2.1` 保持一致。Cargo 包发布与原生库 Release 分开执行。
 
 `0.2.1` 保留 `0.2.0` 的 Rust API、Mojom wire 格式、Chromium pin 和原生 ABI。
 接收时复用提取 handles 的原生查询结果，省去重复的 `GetMessageData`；
