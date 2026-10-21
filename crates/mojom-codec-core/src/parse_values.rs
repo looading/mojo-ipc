@@ -201,10 +201,31 @@ fn check_for_duplicate_keys(offset: usize, keys: &mut [MojomValue]) -> ParsingRe
 // the other fields. This struct holds the information we need to parse and
 // validate them, when we reach them.
 
+/// Debug labels are materialized only when returned in a struct AST or used
+/// in an error. Array and union labels never need an allocation on success.
+#[derive(Clone, Copy)]
+enum FieldName<'a> {
+    Borrowed(&'a str),
+    ArrayTag(usize),
+    ArrayElement(usize),
+    Union(i32),
+}
+
+impl FieldName<'_> {
+    fn into_string(self) -> String {
+        match self {
+            Self::Borrowed(name) => name.to_owned(),
+            Self::ArrayTag(idx) => format!("Array_Tags_{idx}"),
+            Self::ArrayElement(idx) => format!("Array_Element_{idx}"),
+            Self::Union(tag) => format!("Union_Field_{tag}"),
+        }
+    }
+}
+
 /// Information about a nested struct/array, which we expect to see later.
 struct NestedDataInfo<'a> {
     ty: &'a PackedStructuredType,
-    field_name: String,
+    field_name: FieldName<'a>,
     ordinal: Ordinal,
     /// The expected location of the nested data, as an offset in bytes from the
     /// start of the enclosing struct
@@ -264,6 +285,24 @@ pub fn parse_struct(
     fields: &[StructuredBodyElementOwned],
     num_elements_in_value: usize,
 ) -> ParsingResult<MojomValue> {
+    parse_struct_with_field_names(
+        data,
+        field_names
+            .iter()
+            .map(|name| FieldName::Borrowed(name.as_str())),
+        fields,
+        num_elements_in_value,
+        true,
+    )
+}
+
+fn parse_struct_with_field_names<'a>(
+    data: &mut ParserData,
+    field_names: impl Iterator<Item = FieldName<'a>>,
+    fields: &'a [StructuredBodyElementOwned],
+    num_elements_in_value: usize,
+    collect_names: bool,
+) -> ParsingResult<MojomValue> {
     // Parse the struct header
     let size_in_bytes = parse_size(data, false, false)?;
     let version_number = parse_u32(data)?;
@@ -283,9 +322,108 @@ pub fn parse_struct(
         field_names,
         fields.iter().map(StructuredBodyElementOwned::as_ref),
         num_elements_in_value,
+        collect_names,
     )?;
 
     Ok(MojomValue::Struct(parsed_names, parsed_fields))
+}
+
+fn parse_nested_value(
+    data: &mut ParserData,
+    ty: &PackedStructuredType,
+) -> ParsingResult<MojomValue> {
+    match ty {
+        PackedStructuredType::Struct {
+            packed_field_names,
+            packed_field_types,
+            num_elements_in_value,
+        } => parse_struct(
+            data,
+            packed_field_names,
+            packed_field_types,
+            *num_elements_in_value,
+        ),
+        PackedStructuredType::Array {
+            element_type,
+            array_type,
+        } => parse_array(data, element_type, array_type),
+        PackedStructuredType::Union { variants } => {
+            // A union behind a pointer is itself non-nullable. Nullability
+            // belongs to the enclosing pointer and is wrapped by the caller.
+            Ok(parse_union(data, None, variants, false)?
+                .1
+                .expect("Parsing nested union should always return a value"))
+        }
+        PackedStructuredType::Map {
+            key_type,
+            value_type,
+        } => parse_map(data, key_type, value_type),
+    }
+}
+
+fn parse_pointer_array(
+    data: &mut ParserData,
+    size_in_bytes: usize,
+    num_elements: usize,
+    nested_data_type: &PackedStructuredType,
+    is_nullable: bool,
+) -> ParsingResult<MojomValue> {
+    let initial_bytes_parsed = data.bytes_parsed() - 8;
+    // A truncated table should fail through the same sequential pointer reads
+    // as the general parser, without reserving the untrusted element count.
+    let mut expected_offsets = Vec::with_capacity(num_elements.min(data.remaining_bytes() / 8));
+    for _ in 0..num_elements {
+        skip_to_alignment(data, 8)?;
+        let pointer_value = parse_pointer(data, is_nullable)?;
+        let expected_offset = if pointer_value == 0 {
+            0
+        } else {
+            let slot_offset = data.bytes_parsed() - initial_bytes_parsed - 8;
+            slot_offset.checked_add(pointer_value).ok_or_else(|| {
+                ParsingError::invalid_pointer(data.bytes_parsed() - 8, pointer_value as u64)
+            })?
+        };
+        expected_offsets.push(expected_offset);
+    }
+
+    // Keep the general structured-body validation order: all pointer slots,
+    // declared inline size/padding, then aligned nested data in array order.
+    let bytes_parsed_so_far = data.bytes_parsed() - initial_bytes_parsed;
+    if bytes_parsed_so_far > size_in_bytes {
+        return Err(ParsingError::wrong_size(
+            data.bytes_parsed(),
+            size_in_bytes,
+            bytes_parsed_so_far,
+        ));
+    } else if bytes_parsed_so_far < size_in_bytes {
+        parse_padding(data, size_in_bytes - bytes_parsed_so_far)?;
+    }
+
+    let mut parsed_fields = Vec::with_capacity(num_elements);
+    for (idx, expected_offset) in expected_offsets.into_iter().enumerate() {
+        if expected_offset == 0 {
+            parsed_fields.push(MojomValue::Nullable(None));
+            continue;
+        }
+        skip_to_alignment(data, 8)?;
+        let actual_offset = data.bytes_parsed() - initial_bytes_parsed;
+        if expected_offset != actual_offset {
+            return Err(ParsingError::wrong_pointer(
+                data.bytes_parsed(),
+                FieldName::ArrayElement(idx).into_string(),
+                expected_offset,
+                actual_offset,
+            ));
+        }
+        let parsed_value = parse_nested_value(data, nested_data_type)?;
+        parsed_fields.push(if is_nullable {
+            MojomValue::Nullable(Some(Box::new(parsed_value)))
+        } else {
+            parsed_value
+        });
+    }
+    skip_to_alignment(data, 8)?;
+    Ok(MojomValue::Array(parsed_fields))
 }
 
 fn parse_array(
@@ -315,6 +453,110 @@ fn parse_array(
         return parse_string(data, size_in_bytes, num_elements);
     }
 
+    if let MojomWireType::Leaf {
+        leaf_type,
+        is_nullable: true,
+    } = &**element_type
+        && crate::nullable_array::layout(leaf_type, 0).is_some()
+    {
+        let layout = crate::nullable_array::layout(leaf_type, num_elements).ok_or_else(|| {
+            ParsingError::invalid_size(data.bytes_parsed() - 8, size_in_bytes as u32)
+        })?;
+        let required = layout.body_size.checked_add(8).ok_or_else(|| {
+            ParsingError::invalid_size(data.bytes_parsed() - 8, size_in_bytes as u32)
+        })?;
+        if size_in_bytes < required {
+            return Err(ParsingError::wrong_size(
+                data.bytes_parsed(),
+                size_in_bytes,
+                required,
+            ));
+        }
+        let body = parse_raw_bytes(data, size_in_bytes - 8)?;
+        skip_to_alignment(data, 8)?;
+        return Ok(MojomValue::NullablePrimitiveArray(
+            crate::nullable_array::NullablePrimitiveArray::from_wire(
+                leaf_type,
+                &body[..layout.body_size],
+                num_elements,
+                layout,
+            ),
+        ));
+    }
+
+    if matches!(
+        &**element_type,
+        MojomWireType::Leaf {
+            leaf_type: PackedLeafType::UInt8,
+            is_nullable: false,
+        }
+    ) {
+        // Validate the wire header and available bytes before allocating the
+        // payload. Like the generic parser (and C++), allow the declared size
+        // to exceed the required storage and consume that extra padding.
+        let required_size = num_elements.checked_add(8).ok_or_else(|| {
+            ParsingError::invalid_size(data.bytes_parsed() - 8, size_in_bytes as u32)
+        })?;
+        if size_in_bytes < required_size {
+            return Err(ParsingError::wrong_size(
+                data.bytes_parsed(),
+                size_in_bytes,
+                required_size,
+            ));
+        }
+        let body = parse_raw_bytes(data, size_in_bytes - 8)?;
+        skip_to_alignment(data, 8)?;
+        return Ok(MojomValue::ByteArray(body[..num_elements].to_vec()));
+    }
+
+    if let MojomWireType::Leaf {
+        leaf_type,
+        is_nullable: false,
+    } = &**element_type
+        && crate::primitive_array::payload_size(leaf_type, 0).is_some()
+    {
+        let storage =
+            crate::primitive_array::payload_size(leaf_type, num_elements).ok_or_else(|| {
+                ParsingError::invalid_size(data.bytes_parsed() - 8, size_in_bytes as u32)
+            })?;
+        let required_size = storage.checked_add(8).ok_or_else(|| {
+            ParsingError::invalid_size(data.bytes_parsed() - 8, size_in_bytes as u32)
+        })?;
+        if size_in_bytes < required_size {
+            return Err(ParsingError::wrong_size(
+                data.bytes_parsed(),
+                size_in_bytes,
+                required_size,
+            ));
+        }
+        // Validate all declared storage and tail alignment before allocating.
+        // Extra declared bytes and unused bool bits keep their old semantics.
+        let body = parse_raw_bytes(data, size_in_bytes - 8)?;
+        skip_to_alignment(data, 8)?;
+        return Ok(MojomValue::PrimitiveArray(
+            crate::primitive_array::PrimitiveArray::from_wire(
+                leaf_type,
+                &body[..storage],
+                num_elements,
+            )
+            .expect("supported scalar storage type"),
+        ));
+    }
+
+    if let MojomWireType::Pointer {
+        nested_data_type,
+        is_nullable,
+    } = &**element_type
+    {
+        return parse_pointer_array(
+            data,
+            size_in_bytes,
+            num_elements,
+            nested_data_type,
+            *is_nullable,
+        );
+    }
+
     // An array body is equivalent to a struct body with `num_elements` copies
     // of its field.
     let array_body = crate::pack::pack_array_body(element_type, num_elements);
@@ -338,17 +580,17 @@ fn parse_array(
     } else {
         num_elements
     };
-    let tag_names = (0..num_tag_bitfields).map(|idx| format!("Array_Tags_{idx}"));
-    let elt_names = (0..num_named_elements).map(|idx| format!("Array_Element_{idx}"));
-    let field_names = tag_names.chain(elt_names).collect::<Vec<_>>();
+    let tag_names = (0..num_tag_bitfields).map(FieldName::ArrayTag);
+    let elt_names = (0..num_named_elements).map(FieldName::ArrayElement);
 
     let (_names, parsed_fields) = parse_structured_body(
         data,
         None,
         size_in_bytes,
-        &field_names,
+        tag_names.chain(elt_names),
         array_body.into_iter(),
         num_elements,
+        false,
     )?;
 
     Ok(MojomValue::Array(parsed_fields))
@@ -410,7 +652,6 @@ fn parse_union<'a>(
 
     // A union is structured data with a single, variable field.
     // Make up a dummy field name for debugging.
-    let field_name = format!("Union_Field_{tag}");
     let struct_ref_element: StructuredBodyElementMixed =
         StructuredBodyElement::SingleValue(0, field_ty);
 
@@ -418,9 +659,10 @@ fn parse_union<'a>(
         data,
         enclosing_nested_data_list.as_deref_mut(),
         size_in_bytes,
-        std::slice::from_ref(&field_name),
+        std::iter::once(FieldName::Union(tag)),
         std::iter::once(struct_ref_element),
         1,
+        false,
     )?;
     assert_eq!(parsed_fields.len(), 1);
 
@@ -458,9 +700,16 @@ fn parse_map(
     let initial_bytes_parsed = data.bytes_parsed();
     // Maps are encoded as a struct containing a pair of arrays, one for
     // the keys and one for the corresponding values.
-    let field_names = ["map_keys".to_string(), "map_values".to_string()];
     let fields = convert_map_ty_to_struct_fields(key_type, value_type);
-    let parsed_arrays = parse_struct(data, &field_names, &fields, 2)?;
+    let parsed_arrays = parse_struct_with_field_names(
+        data,
+        ["map_keys", "map_values"]
+            .into_iter()
+            .map(FieldName::Borrowed),
+        &fields,
+        2,
+        false,
+    )?;
     let parsed_fields = match parsed_arrays {
         MojomValue::Struct(_, fields) => fields,
         _ => panic!(
@@ -469,6 +718,20 @@ fn parse_map(
         ),
     };
     let [keys, values] = parsed_fields.try_into().unwrap();
+    // Map keys/values are encoded as arrays. Scalar columns may have used
+    // a compact representation; the map still validates duplicates
+    // and converts every element using its original scalar semantics.
+    let expand_bytes = |value| match value {
+        MojomValue::NullablePrimitiveArray(array) => {
+            MojomValue::Array(array.into_values().collect())
+        }
+        MojomValue::PrimitiveArray(array) => MojomValue::Array(array.into_values().collect()),
+        MojomValue::ByteArray(bytes) => {
+            MojomValue::Array(bytes.into_iter().map(MojomValue::UInt8).collect())
+        }
+        value => value,
+    };
+    let (keys, values) = (expand_bytes(keys), expand_bytes(values));
     match (keys, values) {
         (MojomValue::Array(mut keys), MojomValue::Array(values)) => {
             if keys.len() != values.len() {
@@ -494,9 +757,8 @@ fn parse_map(
     }
 }
 
-/// Parse a string embedded in the mojom message. We don't do any validation of
-/// the bytes (since mojom doesn't provide any guarantees), so this is as
-/// simple as grabbing the bytes and ensuring the header was correct.
+/// Parse an owned UTF-8 string, preserving the standard library's validation
+/// error and the parser position when malformed bytes are encountered.
 fn parse_string(
     data: &mut ParserData,
     size_in_bytes: usize,
@@ -511,9 +773,20 @@ fn parse_string(
             num_elements + 8,
         ));
     }
-    let string_bytes = parse_raw_bytes(data, num_elements)?.to_vec();
-    let rust_string = String::from_utf8(string_bytes)
-        .map_err(|err| ParsingError::non_utf8_string(data.bytes_parsed(), err))?;
+    let string_bytes = parse_raw_bytes(data, num_elements)?;
+    let rust_string = if string_bytes.len() < 64 {
+        String::from_utf8(string_bytes.to_vec())
+            .map_err(|err| ParsingError::non_utf8_string(data.bytes_parsed(), err))?
+    } else {
+        match simdutf8::basic::from_utf8(string_bytes) {
+            Ok(text) => text.to_owned(),
+            // Preserve FromUtf8Error, its owned bytes and its exact standard
+            // error position. Return the standard result even if a validator
+            // ever produces a false negative instead of assuming it must fail.
+            Err(_) => String::from_utf8(string_bytes.to_vec())
+                .map_err(|err| ParsingError::non_utf8_string(data.bytes_parsed(), err))?,
+        }
+    };
     // Array bodies always end at 8 byte alignment, though it's not
     // reflected in the header's reported size.
     skip_to_alignment(data, 8)?;
@@ -564,13 +837,14 @@ fn wrap_nullable_primitive(
 ///
 /// The `enclosing_nested_data_list` argument is only used for a special case
 /// involving unions. See the documentation of `parse_union` for details.
-fn parse_structured_body<'a, 'b, IterT, BitfieldT>(
+fn parse_structured_body<'a, IterT, BitfieldT>(
     data: &mut ParserData,
     enclosing_nested_data_list: Option<&mut Vec<NestedDataInfo<'a>>>,
     expected_size_in_bytes: usize,
-    field_names: &[String],
+    field_names: impl Iterator<Item = FieldName<'a>>,
     fields: IterT,
     num_elements_in_value: usize,
+    collect_names: bool,
 ) -> ParsingResult<(Vec<String>, Vec<MojomValue>)>
 where
     BitfieldT: std::borrow::Borrow<BitfieldOrdinals> + std::fmt::Debug,
@@ -588,12 +862,16 @@ where
     // Pre-allocate space for the parsed values, so we can write directly into
     // them by index. We have to provide dummy values since rust won't allow
     // uninitialized memory.
-    let mut ret_names: Vec<String> = vec![String::new(); num_elements_in_value];
+    let mut ret_names: Vec<String> = if collect_names {
+        vec![String::new(); num_elements_in_value]
+    } else {
+        Vec::new()
+    };
     let mut ret_values: Vec<MojomValue> = (0..num_elements_in_value)
         .map(|_| MojomValue::Invalid)
         .collect();
 
-    let named_fields = Itertools::zip_eq(field_names.iter(), fields);
+    let named_fields = Itertools::zip_eq(field_names, fields);
 
     for (name, struct_ref_element) in named_fields {
         // Make sure we're at the right alignment for this field
@@ -607,7 +885,9 @@ where
                     let bit = (parsed_bits >> idx) & 1;
                     let parsed_val = MojomValue::Bool(bit == 1);
                     let parsed_val = wrap_nullable_primitive(&ret_values, *ordinal, parsed_val);
-                    ret_names[*ordinal] = name.clone();
+                    if collect_names {
+                        ret_names[*ordinal] = name.into_string();
+                    }
                     ret_values[*ordinal] = parsed_val;
                 }
             }
@@ -623,7 +903,9 @@ where
                         // If the pointer was (validly) null, then there's no
                         // nested data to parse, we can just say None here.
                         if pointer_value == 0 {
-                            ret_names[ordinal] = name.clone();
+                            if collect_names {
+                                ret_names[ordinal] = name.into_string();
+                            }
                             ret_values[ordinal] = MojomValue::Nullable(None);
                             continue;
                         }
@@ -631,7 +913,7 @@ where
                         let nested_info = NestedDataInfo {
                             ty: nested_data_type,
                             ordinal,
-                            field_name: name.clone(),
+                            field_name: name,
                             expected_offset: data.bytes_parsed() - initial_bytes_parsed
                         - 8 // Don't count the bytes we just parsed
                         + pointer_value,
@@ -657,7 +939,9 @@ where
                             parsed_value =
                                 wrap_nullable_primitive(&ret_values, ordinal, parsed_value);
                         }
-                        ret_names[ordinal] = name.clone();
+                        if collect_names {
+                            ret_names[ordinal] = name.into_string();
+                        }
                         ret_values[ordinal] = parsed_value;
                     }
                     MojomWireType::Union {
@@ -669,7 +953,9 @@ where
                         match parse_union(data, Some(nested_data_list), variants, *is_nullable)? {
                             // If we have a complete value, we can just store it as usual.
                             (_, Some(parsed_value)) => {
-                                ret_names[ordinal] = name.clone();
+                                if collect_names {
+                                    ret_names[ordinal] = name.into_string();
+                                }
                                 ret_values[ordinal] = parsed_value;
                             }
                             // Otherwise, the union contained a pointer, and its info was appended
@@ -727,38 +1013,12 @@ where
         if nested_data.expected_offset != bytes_parsed_so_far {
             return Err(ParsingError::wrong_pointer(
                 data.bytes_parsed(),
-                nested_data.field_name,
+                nested_data.field_name.into_string(),
                 nested_data.expected_offset,
                 bytes_parsed_so_far,
             ));
         }
-        let mut parsed_data = match nested_data.ty {
-            PackedStructuredType::Struct {
-                packed_field_names,
-                packed_field_types,
-                num_elements_in_value,
-            } => parse_struct(
-                data,
-                packed_field_names,
-                packed_field_types,
-                *num_elements_in_value,
-            )?,
-            PackedStructuredType::Array {
-                element_type,
-                array_type,
-            } => parse_array(data, element_type, array_type)?,
-            PackedStructuredType::Union { variants } => {
-                // Unions in a structured body are never nullable
-                // (the pointer would have been nullable instead)
-                parse_union(data, None, variants, false)?
-                    .1
-                    .expect("Parsing nested union should always return a value")
-            }
-            PackedStructuredType::Map {
-                key_type,
-                value_type,
-            } => parse_map(data, key_type, value_type)?,
-        };
+        let mut parsed_data = parse_nested_value(data, nested_data.ty)?;
         // If necessary, wrap the parsed value based on the type it was
         // contained in
         if nested_data.was_nullable {
@@ -773,7 +1033,9 @@ where
             // This data was contained inside a _nullable_ union
             parsed_data = MojomValue::Nullable(Some(Box::new(parsed_data)));
         };
-        ret_names[nested_data.ordinal] = nested_data.field_name;
+        if collect_names {
+            ret_names[nested_data.ordinal] = nested_data.field_name.into_string();
+        }
         ret_values[nested_data.ordinal] = parsed_data;
     }
 
@@ -839,8 +1101,10 @@ pub fn extract_interface_ids(
         &INTERFACE_ARRAY_TY,
         &PackedArrayType::UnsizedArray,
     )?;
-    let MojomValue::Array(id_vec) = id_array_parsed else {
-        unreachable!(); // We got this from parse_array
+    let id_vec: Box<dyn ExactSizeIterator<Item = MojomValue>> = match id_array_parsed {
+        MojomValue::Array(values) => Box::new(values.into_iter()),
+        MojomValue::PrimitiveArray(array) => array.into_values(),
+        _ => unreachable!("interface ID array uses UInt32 elements"),
     };
 
     let id_vec = id_vec

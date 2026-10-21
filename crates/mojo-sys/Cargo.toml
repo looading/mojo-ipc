@@ -3,7 +3,11 @@ name = "mojo-sys"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 publish.workspace = true
+description = "FFI types and dynamic dispatch for the unofficial Chromium Mojo Rust SDK"
+readme = "README.md"
 links = "chromium_mojo_runtime"
 build = "build.rs"
 

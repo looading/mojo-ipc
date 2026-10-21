@@ -160,6 +160,33 @@ impl MessageHeader {
         }
     }
 
+    /// Encode the header into stack storage for the message send path.
+    /// Only the returned prefix belongs to this header version.
+    pub(crate) fn serialize_stack(self) -> ([u8; 56], usize) {
+        let len: usize = match self.version {
+            1 => 32,
+            2 => 48,
+            3 => 56,
+            _ => panic!("Header version must be 1, 2, or 3"),
+        };
+        let mut bytes = [0; 56];
+        bytes[0..4].copy_from_slice(&(len as u32).to_le_bytes());
+        bytes[4..8].copy_from_slice(&self.version.to_le_bytes());
+        bytes[8..12].copy_from_slice(&self.interface_id.to_le_bytes());
+        bytes[12..16].copy_from_slice(&self.name.to_le_bytes());
+        bytes[16..20].copy_from_slice(&self.flags.bits().to_le_bytes());
+        bytes[20..24].copy_from_slice(&self.trace_nonce.to_le_bytes());
+        bytes[24..32].copy_from_slice(&self.request_id.to_le_bytes());
+        if self.version >= 2 {
+            bytes[32..40].copy_from_slice(&self.payload_ptr.to_le_bytes());
+            bytes[40..48].copy_from_slice(&self.interface_ids_ptr.to_le_bytes());
+        }
+        if self.version == 3 {
+            bytes[48..56].copy_from_slice(&self.creation_timeticks_us.to_le_bytes());
+        }
+        (bytes, len)
+    }
+
     /// Serialize the header as a mojom value
     pub fn serialize(self) -> Vec<u8> {
         let v1 = mojom_value_parser::MessageHeaderV1 {
@@ -305,3 +332,134 @@ const _: () = {
         }
     }
 };
+
+#[cfg(test)]
+mod stack_serialization_tests {
+    use super::*;
+
+    // Construct headers directly: serializing a header does not require a
+    // loaded native runtime, unlike the trace/time helpers used by `new`.
+    fn asymmetric_header(version: u32) -> MessageHeader {
+        MessageHeader {
+            version,
+            interface_id: 0x4433_2211,
+            name: 0x8877_6655,
+            flags: MessageHeaderFlags::from_bits_retain(0xa5a5_1213),
+            trace_nonce: 0xccbb_aa99,
+            request_id: 0x0807_0605_0403_0201,
+            payload_ptr: 0x1817_1615_1413_1211,
+            interface_ids_ptr: 0x2827_2625_2423_2221,
+            creation_timeticks_us: 0xc8c7_c6c5_c4c3_c2c1u64 as i64,
+        }
+    }
+
+    fn core_reference(header: MessageHeader) -> Vec<u8> {
+        let v1 = mojom_value_parser::MessageHeaderV1 {
+            interface_id: header.interface_id,
+            name: header.name,
+            flags: header.flags.bits(),
+            trace_nonce: header.trace_nonce,
+            request_id: header.request_id,
+        };
+        let v2 = mojom_value_parser::MessageHeaderV2 {
+            payload_ptr: header.payload_ptr,
+            interface_ids_ptr: header.interface_ids_ptr,
+        };
+        let v3 = mojom_value_parser::MessageHeaderV3 {
+            creation_timeticks_us: header.creation_timeticks_us,
+        };
+        match header.version {
+            1 => mojom_value_parser::MessageHeader::V1(v1),
+            2 => mojom_value_parser::MessageHeader::V2(v1, v2),
+            3 => mojom_value_parser::MessageHeader::V3(v1, v2, v3),
+            _ => unreachable!(),
+        }
+        .serialize()
+    }
+
+    #[test]
+    fn stack_header_matches_literal_wire_layout_for_each_version() {
+        // Independent, asymmetric bytes catch swapped fields and host-endian
+        // writes; flags deliberately retain unknown and conflicting bits.
+        let golden_v3 = [
+            0x38, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+            0x77, 0x88, 0x13, 0x12, 0xa5, 0xa5, 0x99, 0xaa, 0xbb, 0xcc, 0x01, 0x02, 0x03, 0x04,
+            0x05, 0x06, 0x07, 0x08, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x21, 0x22,
+            0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8,
+        ];
+        for (version, expected_len) in [(1, 32), (2, 48), (3, 56)] {
+            let mut expected = golden_v3;
+            expected[0] = expected_len as u8;
+            expected[4] = version as u8;
+            let (bytes, len) = asymmetric_header(version).serialize_stack();
+            assert_eq!(len, expected_len);
+            assert_eq!(&bytes[..len], &expected[..len]);
+            assert!(bytes[len..].iter().all(|byte| *byte == 0));
+        }
+    }
+
+    #[test]
+    fn stack_header_matches_core_for_extremes_and_unknown_flags() {
+        for version in [1, 2, 3] {
+            let base = asymmetric_header(version);
+            let cases = [
+                base,
+                MessageHeader {
+                    interface_id: 0,
+                    name: 0,
+                    flags: MessageHeaderFlags::empty(),
+                    trace_nonce: 0,
+                    request_id: 0,
+                    payload_ptr: 0,
+                    interface_ids_ptr: 0,
+                    creation_timeticks_us: 0,
+                    ..base
+                },
+                MessageHeader {
+                    interface_id: u32::MAX,
+                    name: u32::MAX,
+                    flags: MessageHeaderFlags::from_bits_retain(u32::MAX),
+                    trace_nonce: u32::MAX,
+                    request_id: u64::MAX,
+                    payload_ptr: u64::MAX,
+                    interface_ids_ptr: u64::MAX,
+                    creation_timeticks_us: i64::MAX,
+                    ..base
+                },
+                MessageHeader {
+                    creation_timeticks_us: i64::MIN,
+                    ..base
+                },
+            ];
+            for header in cases {
+                let (bytes, len) = header.serialize_stack();
+                let reference = core_reference(header);
+                assert_eq!(&bytes[..len], reference);
+                assert_eq!(header.serialize(), reference);
+            }
+        }
+    }
+
+    #[test]
+    fn earlier_versions_omit_later_fields_without_normalizing_pointers() {
+        let v1 = asymmetric_header(1);
+        let changed_v1 = MessageHeader {
+            payload_ptr: 0,
+            interface_ids_ptr: 0,
+            creation_timeticks_us: 0,
+            ..v1
+        };
+        assert_eq!(v1.serialize_stack(), changed_v1.serialize_stack());
+
+        let v2 = asymmetric_header(2);
+        let changed_v2 = MessageHeader {
+            creation_timeticks_us: 0,
+            ..v2
+        };
+        assert_eq!(v2.serialize_stack(), changed_v2.serialize_stack());
+        let (bytes, len) = v2.serialize_stack();
+        assert_eq!(len, 48);
+        assert_eq!(&bytes[32..40], &v2.payload_ptr.to_le_bytes());
+        assert_eq!(&bytes[40..48], &v2.interface_ids_ptr.to_le_bytes());
+    }
+}

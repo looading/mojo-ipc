@@ -73,7 +73,7 @@ pub fn serialize<Context, T: MojomParse<T, Context>>(
     value: T,
     context: &Context,
 ) -> (Vec<u8>, Vec<UntypedHandle>, u64) {
-    let mojom_value: MojomValue = value.into_mojom_value(context);
+    let mojom_value: MojomValue = value.into_mojom_value_for_wire(context);
     crate::deparse_values::deparse_top_level_value(mojom_value, T::wire_type())
         // The Err return value is mostly useful for internal debugging
         .expect("Deparsing should always succeed")

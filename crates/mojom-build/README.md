@@ -6,6 +6,11 @@ templates, PLY, Jinja2, MarkupSafe, and their licenses are included in the packa
 Generation needs Python 3.10 or newer; it does not install Python packages or
 download Chromium during a build. Set `MOJOM_PYTHON` to select an interpreter.
 
+For SDK `0.2.0`, use matching `0.2.0` runtime, codec
+and derive crates and regenerate protocol bindings together. The compact public
+AST variants require low-level consumers to adapt from `0.1.0`; unchanged Mojom
+wire bytes do not establish Rust source API compatibility.
+
 Use a dedicated protocol crate. Its `build.rs` can contain:
 
 ```rust
@@ -31,6 +36,17 @@ include!(concat!(env!("OUT_DIR"), "/mojom/mod.rs"));
 ```
 
 `runtime_crate("ipc")` corresponds to a dependency named `ipc`, for example:
+
+```toml
+[dependencies]
+ipc = { package = "mojo-ipc", version = "0.2.0" }
+
+[build-dependencies]
+mojom-build = "0.2.0"
+```
+
+For local development inside the source repository's `examples/protocol`, use
+these path dependencies instead. Adjust the paths for another directory layout:
 
 ```toml
 [dependencies]

@@ -39,6 +39,9 @@ mod multiplex_router_handle;
 mod response_sender;
 mod router_handle;
 
+#[cfg(test)]
+mod native_dispatch_tests;
+
 // Needed to call `MultiplexRouterHandle` methods
 pub(crate) use endpoint_registry::{
     EndpointInfo, INVALID_INTERFACE_ID, InterfaceId, PRIMARY_INTERFACE_ID,

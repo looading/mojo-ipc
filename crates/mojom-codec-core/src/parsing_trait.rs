@@ -36,9 +36,12 @@
 //! when custom types are in external crates.
 
 use crate::ast::*;
+use crate::nullable_array::{self, NullablePrimitiveArray};
 use crate::pack::pack_mojom_type;
+use crate::primitive_array::{self, PrimitiveArray, move_identical_vec};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
+use std::any::TypeId;
 use std::collections::HashMap;
 
 use system::buffer::SharedBuffer;
@@ -70,6 +73,15 @@ where
     fn mojom_type() -> MojomType;
 
     fn into_mojom_value(self, context: &Context) -> MojomValue;
+
+    /// Serialization-only conversion. Field names in derived structs are
+    /// diagnostic metadata and never appear on the wire. Implementations may
+    /// omit that metadata here; custom conversions retain their original
+    /// behavior through this default, including their Context side effects.
+    #[doc(hidden)]
+    fn into_mojom_value_for_wire(self, context: &Context) -> MojomValue {
+        self.into_mojom_value(context)
+    }
 
     fn try_from_mojom_value(value: MojomValue, context: &Context) -> anyhow::Result<Self>;
 
@@ -190,6 +202,34 @@ mojomparse_leaf_impl!(SharedBuffer, Handle);
 
 // This can be read as "If T can be serialized by converting to a W,
 // then Vec<T> can be serialized by converting to Vec<W>"
+
+fn is_native_byte_array<T: 'static, W: 'static>() -> bool {
+    TypeId::of::<T>() == TypeId::of::<u8>() && TypeId::of::<W>() == TypeId::of::<u8>()
+}
+
+fn vec_into_value<Context, T, W>(
+    value: Vec<T>,
+    context: &Context,
+    convert: impl Fn(T, &Context) -> MojomValue,
+) -> MojomValue
+where
+    T: MojomParse<W, Context>,
+    W: 'static,
+{
+    if is_native_byte_array::<T, W>() {
+        return MojomValue::ByteArray(move_identical_vec(value));
+    }
+    let value = match NullablePrimitiveArray::from_vec::<T, W>(value) {
+        Ok(array) => return MojomValue::NullablePrimitiveArray(array),
+        Err(value) => value,
+    };
+    let value = match PrimitiveArray::from_vec::<T, W>(value) {
+        Ok(array) => return MojomValue::PrimitiveArray(array),
+        Err(value) => value,
+    };
+    MojomValue::Array(value.into_iter().map(|v| convert(v, context)).collect())
+}
+
 impl<Context, T, W> MojomParse<Vec<W>, Context> for Vec<T>
 where
     T: MojomParse<W, Context>,
@@ -203,24 +243,55 @@ where
     }
 
     fn into_mojom_value(self, context: &Context) -> MojomValue {
-        MojomValue::Array(
-            self.into_iter()
-                .map(|v| <T as MojomParse<W, Context>>::into_mojom_value(v, context))
-                .collect(),
-        )
+        vec_into_value(self, context, T::into_mojom_value)
+    }
+
+    fn into_mojom_value_for_wire(self, context: &Context) -> MojomValue {
+        vec_into_value(self, context, T::into_mojom_value_for_wire)
     }
 
     fn try_from_mojom_value(value: MojomValue, context: &Context) -> anyhow::Result<Self> {
-        if let MojomValue::Array(v) = value {
-            v.into_iter()
+        match value {
+            MojomValue::NullablePrimitiveArray(array) => match array.into_vec::<T, W>() {
+                Ok(values) => Ok(values),
+                Err(array) => array
+                    .into_values()
+                    .map(|value| {
+                        <T as MojomParse<W, Context>>::try_from_mojom_value(value, context)
+                    })
+                    .collect(),
+            },
+            MojomValue::PrimitiveArray(array) => match array.into_vec::<T, W>() {
+                Ok(values) => Ok(values),
+                Err(array) => array
+                    .into_values()
+                    .map(|value| {
+                        <T as MojomParse<W, Context>>::try_from_mojom_value(value, context)
+                    })
+                    .collect(),
+            },
+            MojomValue::ByteArray(bytes) if is_native_byte_array::<T, W>() => {
+                Ok(move_identical_vec(bytes))
+            }
+            // A typemapped uint8 must still run its conversion for every byte.
+            MojomValue::ByteArray(bytes) => bytes
+                .into_iter()
+                .map(|byte| {
+                    <T as MojomParse<W, Context>>::try_from_mojom_value(
+                        MojomValue::UInt8(byte),
+                        context,
+                    )
+                })
+                .collect(),
+            MojomValue::Array(v) => v
+                .into_iter()
                 .map(|val| <T as MojomParse<W, Context>>::try_from_mojom_value(val, context))
-                .collect::<anyhow::Result<_>>()
-        } else {
-            anyhow::bail!(
+                .collect(),
+            value => anyhow::bail!(
                 "Cannot construct a value of type {} from this MojomValue: {:?}",
                 std::any::type_name::<Self>(),
                 value
-            );
+            ),
         }
     }
 }
@@ -238,6 +309,21 @@ where
     }
 
     fn into_mojom_value(self, context: &Context) -> MojomValue {
+        if is_native_byte_array::<T, W>() {
+            return MojomValue::ByteArray(move_identical_vec(Vec::from(self)));
+        }
+        if nullable_array::is_native::<T, W>() {
+            return MojomValue::NullablePrimitiveArray(
+                NullablePrimitiveArray::from_vec::<T, W>(Vec::from(self))
+                    .unwrap_or_else(|_| unreachable!("native nullable scalar type checked above")),
+            );
+        }
+        if primitive_array::is_native::<T, W>() {
+            return MojomValue::PrimitiveArray(
+                PrimitiveArray::from_vec::<T, W>(Vec::from(self))
+                    .unwrap_or_else(|_| unreachable!("native scalar type was checked above")),
+            );
+        }
         MojomValue::Array(
             self.into_iter()
                 .map(|v| <T as MojomParse<W, Context>>::into_mojom_value(v, context))
@@ -245,7 +331,91 @@ where
         )
     }
 
+    fn into_mojom_value_for_wire(self, context: &Context) -> MojomValue {
+        if is_native_byte_array::<T, W>()
+            || nullable_array::is_native::<T, W>()
+            || primitive_array::is_native::<T, W>()
+        {
+            return <Self as MojomParse<[W; N], Context>>::into_mojom_value(self, context);
+        }
+        MojomValue::Array(
+            self.into_iter()
+                .map(|v| <T as MojomParse<W, Context>>::into_mojom_value_for_wire(v, context))
+                .collect(),
+        )
+    }
+
     fn try_from_mojom_value(value: MojomValue, context: &Context) -> anyhow::Result<Self> {
+        if let MojomValue::NullablePrimitiveArray(array) = value {
+            if array.len() != N {
+                anyhow::bail!(
+                    "Wrong number of values to construct {}: expected {N}, got {}",
+                    std::any::type_name::<Self>(),
+                    array.len()
+                );
+            }
+            return match array.into_vec::<T, W>() {
+                Ok(values) => Ok(values
+                    .try_into()
+                    .unwrap_or_else(|_| unreachable!("array length checked above"))),
+                Err(array) => {
+                    let values = array
+                        .into_values()
+                        .map(|value| {
+                            <T as MojomParse<W, Context>>::try_from_mojom_value(value, context)
+                        })
+                        .process_results(|iter| iter.collect_array())?;
+                    Ok(values.expect("array length checked before conversion"))
+                }
+            };
+        }
+        if let MojomValue::PrimitiveArray(array) = value {
+            if array.len() != N {
+                anyhow::bail!(
+                    "Wrong number of values to construct {}: expected {N}, got {}",
+                    std::any::type_name::<Self>(),
+                    array.len()
+                );
+            }
+            return match array.into_vec::<T, W>() {
+                Ok(values) => Ok(values
+                    .try_into()
+                    .unwrap_or_else(|_| unreachable!("array length checked above"))),
+                Err(array) => {
+                    let values = array
+                        .into_values()
+                        .map(|value| {
+                            <T as MojomParse<W, Context>>::try_from_mojom_value(value, context)
+                        })
+                        .process_results(|iter| iter.collect_array())?;
+                    Ok(values.expect("array length checked before conversion"))
+                }
+            };
+        }
+        if let MojomValue::ByteArray(bytes) = value {
+            if bytes.len() != N {
+                anyhow::bail!(
+                    "Wrong number of values to construct {}: expected {N}, got {}",
+                    std::any::type_name::<Self>(),
+                    bytes.len(),
+                );
+            }
+            if is_native_byte_array::<T, W>() {
+                return Ok(move_identical_vec(bytes)
+                    .try_into()
+                    .unwrap_or_else(|_| unreachable!("array length was checked above")));
+            }
+            let array = bytes
+                .into_iter()
+                .map(|byte| {
+                    <T as MojomParse<W, Context>>::try_from_mojom_value(
+                        MojomValue::UInt8(byte),
+                        context,
+                    )
+                })
+                .process_results(|iter| iter.collect_array())?;
+            return Ok(array.expect("array length was checked before conversion"));
+        }
         let MojomValue::Array(v) = value else {
             anyhow::bail!(
                 "Cannot construct a value of type {} from this MojomValue: {:?}",
@@ -262,14 +432,11 @@ where
             )
         };
 
-        let arr_of_t: [T; N] = v
+        let arr_of_t: Option<[T; N]> = v
             .into_iter()
             .map(|val| <T as MojomParse<W, Context>>::try_from_mojom_value(val, context))
-            .process_results(|iter| {
-                // Unwrap will succeed because we just checked the length above.
-                iter.collect_array().unwrap()
-            })?;
-        Ok(arr_of_t)
+            .process_results(|iter| iter.collect_array())?;
+        Ok(arr_of_t.expect("array length was checked before conversion"))
     }
 }
 
@@ -303,6 +470,19 @@ where
             })
             .collect();
         MojomValue::Map(hashmap)
+    }
+
+    fn into_mojom_value_for_wire(self, context: &Context) -> MojomValue {
+        MojomValue::Map(
+            self.into_iter()
+                .map(|(k, v)| {
+                    (
+                        <K as MojomParse<WK, Context>>::into_mojom_value_for_wire(k, context),
+                        <V as MojomParse<WV, Context>>::into_mojom_value_for_wire(v, context),
+                    )
+                })
+                .collect(),
+        )
     }
 
     fn try_from_mojom_value(value: MojomValue, context: &Context) -> anyhow::Result<Self> {
@@ -347,6 +527,14 @@ where
         )
     }
 
+    fn into_mojom_value_for_wire(self, context: &Context) -> MojomValue {
+        MojomValue::Nullable(self.map(|v| {
+            Box::new(<T as MojomParse<W, Context>>::into_mojom_value_for_wire(
+                v, context,
+            ))
+        }))
+    }
+
     fn try_from_mojom_value(value: MojomValue, context: &Context) -> anyhow::Result<Self> {
         if let MojomValue::Nullable(opt) = value {
             opt.map(|v| <T as MojomParse<W, Context>>::try_from_mojom_value(*v, context))
@@ -372,6 +560,10 @@ where
 
     fn into_mojom_value(self, context: &Context) -> MojomValue {
         <T as MojomParse<W, Context>>::into_mojom_value(*self, context)
+    }
+
+    fn into_mojom_value_for_wire(self, context: &Context) -> MojomValue {
+        <T as MojomParse<W, Context>>::into_mojom_value_for_wire(*self, context)
     }
 
     fn try_from_mojom_value(value: MojomValue, context: &Context) -> anyhow::Result<Self> {

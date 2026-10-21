@@ -108,6 +108,17 @@ pub enum MojomValue {
     Struct(Vec<String>, Vec<MojomValue>),
     // Invariant: all MojomValues in the array are the same type.
     Array(Vec<MojomValue>),
+    /// Compact representation of an array of non-nullable uint8 elements.
+    /// Uses the same Mojom wire type and bytes as `Array` of `UInt8` values.
+    /// Array conversions accept both representations; this avoids allocating
+    /// an intermediate enum and debug field name for every payload byte.
+    ByteArray(Vec<u8>),
+    /// Compact non-nullable scalar array, with the same wire representation
+    /// as an `Array` containing the corresponding scalar values.
+    PrimitiveArray(crate::primitive_array::PrimitiveArray),
+    /// Compact scalar array with per-element nullability, preserving the
+    /// Mojom tag bitmap and fixed value slots on the wire.
+    NullablePrimitiveArray(crate::nullable_array::NullablePrimitiveArray),
     // We use a BTreeMap so that we get a consistent ordering when serializing.
     Map(BTreeMap<MojomValue, MojomValue>),
     Nullable(Option<Box<MojomValue>>),

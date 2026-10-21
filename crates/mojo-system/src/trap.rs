@@ -65,6 +65,15 @@ pub enum TrapError {
     FailedPrecondition,
 }
 
+/// Single-event result used by bindings without allocating an event vector.
+/// Like `arm`, it returns an arbitrary subset (one event) when arming is blocked.
+#[doc(hidden)]
+pub enum SingleEventArmResult {
+    Success,
+    BlockingEvent(TrapEvent),
+    NoTriggers,
+}
+
 pub enum ArmResult {
     Success,
     BlockingEvents(Vec<TrapEvent>),
@@ -262,27 +271,34 @@ impl Trap {
     /// subset of the events that would it to fire. The caller is responsible
     /// for handling them and then calling this again.
     pub fn arm(&self) -> ArmResult {
-        // We can increase this if we need to, but right now callers only use
-        // one at a time.
-        const MAX_BLOCKING_EVENTS: usize = 1;
-        let mut buf = (0..MAX_BLOCKING_EVENTS)
-            .map(|_| mem::MaybeUninit::uninit())
-            .collect::<Vec<_>>();
+        match self.arm_single_event() {
+            SingleEventArmResult::Success => ArmResult::Success,
+            SingleEventArmResult::BlockingEvent(event) => ArmResult::BlockingEvents(vec![event]),
+            SingleEventArmResult::NoTriggers => ArmResult::NoTriggers,
+        }
+    }
 
-        match trap::MojoArmTrap(&self.trap_handle.handle, Some(&mut buf)) {
-            RawArmResult::Armed => ArmResult::Success,
+    /// Attempt to arm using one stack-resident event slot.
+    ///
+    /// This has the same subset/error behavior as `arm`, but returns a single
+    /// owned blocking event instead of allocating a vector. The native wrapper
+    /// initializes the event's ABI size and exposes only initialized slots.
+    #[doc(hidden)]
+    pub fn arm_single_event(&self) -> SingleEventArmResult {
+        let mut buffer = [mem::MaybeUninit::<RawTrapEvent>::uninit()];
+        match trap::MojoArmTrap(&self.trap_handle.handle, Some(&mut buffer)) {
+            RawArmResult::Armed => SingleEventArmResult::Success,
             RawArmResult::Blocked(events) => {
-                let num_initialized_elements = events.len();
-                ArmResult::BlockingEvents(
-                    buf.into_iter()
-                        .take(num_initialized_elements)
-                        // Safety: `MojoArmTrap` guarantees that the first
-                        // `events.len()` elements of `buf` are initialized
-                        .map(|raw_uninit| TrapEvent(unsafe { raw_uninit.assume_init() }))
-                        .collect(),
-                )
+                // The caller supplied capacity one. MojoArmTrap returns an
+                // initialized, nonempty subset within that capacity. Clone the
+                // plain ABI event while the stack buffer is alive; it contains
+                // no owning handles and needs no additional unsafe conversion.
+                let event = events
+                    .first()
+                    .expect("blocked trap must initialize its single event slot");
+                SingleEventArmResult::BlockingEvent(TrapEvent(event.clone()))
             }
-            RawArmResult::Failed(_) => ArmResult::NoTriggers,
+            RawArmResult::Failed(_) => SingleEventArmResult::NoTriggers,
         }
     }
 }

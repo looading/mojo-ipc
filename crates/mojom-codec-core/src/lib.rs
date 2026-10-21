@@ -13,23 +13,28 @@
 
 mod api;
 mod ast;
+mod bitmap;
 mod deparse_values;
 mod errors;
 mod message_header;
+mod nullable_array;
 mod pack;
 mod parse_primitives;
 mod parse_values;
 mod parsing_trait;
+mod primitive_array;
 
 pub use crate::api::*;
 pub use crate::ast::*;
 pub use crate::deparse_values::*;
 pub use crate::errors::*;
 pub use crate::message_header::*;
+pub use crate::nullable_array::NullablePrimitiveArray;
 pub use crate::pack::*;
 pub use crate::parse_primitives::ParserData;
 pub use crate::parse_values::*;
 pub use crate::parsing_trait::*;
+pub use crate::primitive_array::PrimitiveArray;
 
 /// Dependency paths used by generated derive implementations.
 #[doc(hidden)]

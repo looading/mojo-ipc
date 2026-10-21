@@ -3,13 +3,32 @@
 这是开发中的独立 SDK 源码工程，基线为 Chromium
 `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`。底层使用真正的官方 Mojo Core，
 没有用本地队列或自定义 socket RPC 替代 Mojo。
+这是社区维护的 Cargo 移植，不是 Google 或 Chromium 官方发布的 Rust SDK。
 
 **macOS x86_64 已完成官方 Mojo Core 的原生构建和真实 Rust 双进程类型化通信验证。**
 父子进程与独立启动进程的连接均已通过，运行库位于本机 `dist/x86_64-apple-darwin/`。
 Windows x64 已在 macOS 上完成官方 Core DLL 交叉编译，以及 cargo-xwin 的 Rust
 完整编译和链接；Windows 运行验收仍待执行。Linux、macOS arm64 已通过 Rust 编译检查，
 原生构建和运行仍待验收。
-当前为开发版源码工程，尚未发布通用预编译包。
+当前源码的 Cargo 包版本为 `0.2.0`。原生运行库需单独构建和提供，
+尚未发布通用预编译包。
+
+`0.2.0` 新增紧凑数组的公开 AST 变体，低层 `MojomValue` 的穷尽匹配和相等、哈希、
+排序处理需适配，不能视为 `0.1.0` 的 Rust 源码兼容更新。codec、derive、生成器和运行时
+组件应一起升级到 `0.2.0` 并重新生成协议；公开命名 AST 与自定义 Context 转换的默认语义
+保留。Mojom wire 格式、上游 Chromium pin 和原生 C ABI v1 保持不变，历史 `0.1.0`
+registry 对照用于验证 wire 兼容。
+
+本轮还加入栈上消息头编码和单事件 trap arm 路径，保留公开 owned-message 和 `arm()`
+接口。它们的性能与尾延迟效果须以冻结产物的独立对照结果为准。
+
+合格的 primary-only 接口现在可在已经异步投递的 watcher task 末尾处理消息，省去
+额外的 endpoint task；用户 handler 执行前会释放 router/watcher 的回调锁。绑定
+sequence、同 pipe FIFO 和异步收包边界保留，不会在发送调用栈内同步执行 handler。
+associated 接口及不满足条件的路径继续使用原来的排队投递，路由一旦降级就不恢复
+该快捷路径。任意其他 runner task 与 handler 之间的旧相对顺序可能改变，不能再
+依赖额外的第二个 task turn。新 routing 的四项原生语义测试已在 macOS x86_64
+通过；正式性能对照已完成八轮，尾延迟仍存在顺序分组分歧，不能视为已解决 p99 回退。
 
 ## 工程组成
 
@@ -55,6 +74,29 @@ cargo test --workspace --all-targets --locked
 和固定 Chromium checkout，配置要求见 `.github/NATIVE_WORKFLOW.md`。
 两个 workflow 均未在远端执行。
 
+## 性能与稳定性基准
+
+`benchmarks/` 提供独立的私有 Cargo benchmark 和跨平台 Python supervisor：
+类型化 Echo/批量 Push、原始消息管道对照、纯 Mojom 编解码对照、持续负载、
+进程创建/关闭循环，以及持有未完成请求时的异常断连检查。
+
+```sh
+export MOJO_RUNTIME_LIBRARY="$PWD/dist/x86_64-apple-darwin/libmojo_rs_native.dylib"
+python3 benchmarks/run.py --stress-seconds 60 \
+  --output-dir target/benchmark-runs/local-001
+```
+
+需要 Python 3.10+；默认解释器较旧时同时设置 `MOJOM_PYTHON`。
+结果包含真实完成数、RTT 分位数、应用 payload 吞吐、资源采样和运行环境。
+统计口径、各平台资源采集限制和长时运行参数见 `benchmarks/README.md`。
+
+本轮 macOS x86_64 正式八轮中，64 KiB typed RTT 的 run p50 中位数为
+275.6115 → 246.0965 µs，run p99 中位数为 481.6085 → 408.1355 µs。
+但 p99 在 ABBA 组下降 28.49%，在 BAAB 组上升 25.79%；最后一轮 after 和
+全部下降项均保留。每轮前后记录的 CPU_Speed_Limit 也发生变化，端点观测不足以
+确定原因。独立补充 BAAB、数值控制与本轮 after 有限稳定性运行均已分别核验，
+详见 `VALIDATION.md`。
+
 ## 从 macOS/Linux 交叉构建 Windows Rust 目标
 
 安装完整 LLVM（`clang-cl`、`lld-link` 等在 PATH 中），然后执行：
@@ -81,17 +123,18 @@ Windows 运行验收继续保留在现有原生 CI 中，尚未执行。
 
 ## 在业务协议 crate 中生成代码
 
-参照 `examples/protocol`。假设业务协议 crate 与本 SDK 目录同级，`Cargo.toml` 添加：
+参照 `examples/protocol`。业务协议 crate 的 `Cargo.toml` 添加：
 
 ```toml
 [dependencies]
-ipc = { package = "mojo-ipc", path = "../mojo-ipc/crates/mojo-ipc" }
+ipc = { package = "mojo-ipc", version = "0.2.0" }
 
 [build-dependencies]
-mojom-build = { path = "../mojo-ipc/crates/mojom-build" }
+mojom-build = "0.2.0"
 ```
 
-路径按实际目录调整。运行时依赖重命名为 `ipc` 后，`build.rs` 使用实际别名：
+在仓库中开发时，也可以使用对应 `crates/` 目录的 `path` 依赖。
+运行时依赖重命名为 `ipc` 后，`build.rs` 使用实际别名：
 
 ```rust
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -190,3 +233,29 @@ Linux 使用 `.so`，Windows 使用 `mojo_rs_native.dll`；PowerShell 可用
   Linux/macOS arm64 原生目标、并发/崩溃/长时间运行测试仍待完成。
 
 实际已执行的检查与未执行项见 `VALIDATION.md`。
+
+## 本轮尾延迟对照摘要
+
+以下为 macOS x86_64 的独立 run 统计量中位数变化，After 相对 Before；延迟负值
+表示更低，吞吐正值表示更高。正式八轮、各 block 与补充 BAAB 分别计算，不池化。
+
+| 64 KiB 对照 | RTT p50 | RTT p99 | RPC/s |
+| --- | --- | --- | --- |
+| 正式八轮 typed | −10.71% | −15.26% | +12.62% |
+| 正式 ABBA typed | −13.93% | −28.49% | +20.22% |
+| 正式 BAAB typed | +22.64% | +25.79% | −13.80% |
+| 独立补充 BAAB raw | −3.17% | −2.48% | +4.06% |
+| 独立补充 BAAB typed | −14.80% | −26.65% | +16.81% |
+
+补测每侧仅两轮，typed p50 的 before 为 533.300/298.479 µs、after 为
+443.595/265.091 µs；p99 同样有明显跨轮漂移。固定 30 秒间隔不证明环境噪声已
+消除，补测改善也不覆盖正式 BAAB 的回退。完整 48 指标、全部每轮 N/spread、
+两个 block、19 项全八轮下降及其他 scope 下降记录保存在
+[可移植基线](benchmarks/baselines/macos-x64-tail-latency-20261021.json)；这些观测
+不是裸 Mojo Core 指标、显著性结论或其他平台的原生验收。
+
+独立数值控制的 16 次运行仍保留 9 条 scope 下降记录，其中全八轮 3 条；15 个
+codec/derive 源文件哈希相同也不能据此认定全部差异为噪声。after 稳定性运行完成
+30.0015 秒、1,403,739 次请求，pending 为 0，并通过 100 次进程循环及 64 个
+未完成请求的异常断连。104 个 worker 均回收，FD/Mach names 为 4/38；RSS 从
+32,239,616 增至 49,942,528 字节，churn 10→100 又增长 24 KiB。有限通过不证明无泄漏。

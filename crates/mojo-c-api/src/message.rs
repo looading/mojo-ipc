@@ -66,6 +66,109 @@ bitflags::bitflags! {
 }
 declare_mojo_options!(MojoAppendMessageDataOptions, flags: raw_ffi::MojoAppendMessageDataFlags);
 
+fn checked_parts_size(lengths: impl IntoIterator<Item = usize>) -> MojoResult<u32> {
+    let mut size = 0u32;
+    for length in lengths {
+        let length = u32::try_from(length).map_err(|_| MojoError::ResourceExhausted)?;
+        size = size
+            .checked_add(length)
+            .ok_or(MojoError::ResourceExhausted)?;
+    }
+    // Pointer arithmetic within the destination allocation must also fit in
+    // isize, including on 32-bit Rust hosts.
+    if u64::from(size) > isize::MAX as u64 {
+        return Err(MojoError::ResourceExhausted);
+    }
+    Ok(size)
+}
+
+/// Create a fresh, fully committed message from ordered byte slices.
+///
+/// This convenience constructor reserves the complete payload in one native
+/// append and copies each part directly into that buffer. It never concatenates
+/// the parts in an intermediate Rust allocation or appends to an existing
+/// message. Empty parts and an empty payload are permitted.
+///
+/// Ownership of `handles` transfers to the new message only if the native
+/// append succeeds. Every ordinary error returns the original handles unchanged.
+/// Payload/count overflow returns `ResourceExhausted` before calling Mojo.
+///
+/// # Panics
+/// Panics if the trusted native runtime violates its successful-append buffer
+/// contract. At that point the native message owns the handles, and unwinding
+/// destroys that message; those handles must not be returned or closed twice.
+pub fn MojoCreateMessageWithDataParts(
+    parts: &[&[u8]],
+    handles: Vec<UntypedHandle>,
+) -> Result<MessageHandle, (MojoError, Vec<UntypedHandle>)> {
+    let payload_size = match checked_parts_size(parts.iter().map(|part| part.len())) {
+        Ok(size) => size,
+        Err(error) => return Err((error, handles)),
+    };
+    let num_handles = match u32::try_from(handles.len()) {
+        Ok(count) => count,
+        Err(_) => return Err((MojoError::ResourceExhausted, handles)),
+    };
+    let message = MojoCreateMessage(CreateMessageFlags::empty());
+    let options = MojoAppendMessageDataOptions::new(AppendMessageDataFlags::COMMIT_SIZE.bits());
+    let mut buffer: *mut std::ffi::c_void = std::ptr::null_mut();
+    let mut capacity = 0u32;
+    // SAFETY: this message is fresh and uniquely owned. Input handles are live
+    // and uniquely owned by this Vec; their pointer is null exactly when empty.
+    // All output pointers refer to initialized writable stack variables.
+    let result = MojoError::result_from_code(unsafe {
+        raw_ffi::MojoAppendMessageData(
+            message.handle_value.into(),
+            payload_size,
+            UntypedHandle::slice_as_ptr(&handles),
+            num_handles,
+            options.as_ptr(),
+            &mut buffer,
+            &mut capacity,
+        )
+    });
+    if let Err(error) = result {
+        // The native API consumed no handles. The empty message is destroyed
+        // here, while the caller receives every original handle back.
+        return Err((error, handles));
+    }
+    // Successful append transfers ALL handles, even if a subsequent buffer
+    // contract assertion fails. The native message then performs their cleanup.
+    for handle in handles {
+        std::mem::forget(handle);
+    }
+    assert!(
+        capacity >= payload_size,
+        "successful MojoAppendMessageData returned less than the requested capacity"
+    );
+    if payload_size != 0 {
+        assert!(
+            !buffer.is_null(),
+            "successful MojoAppendMessageData returned a null payload buffer"
+        );
+        let mut offset = 0usize;
+        for part in parts {
+            if !part.is_empty() {
+                // SAFETY: the checked sum is the message's exact logical size,
+                // which fits the native capacity and isize. Fresh native storage
+                // cannot alias these live input slices. copy_nonoverlapping
+                // initializes the destination without forming a Rust slice over
+                // the native buffer's previously uninitialized bytes. COMMIT_SIZE
+                // leaves it writable until MojoWriteMessage/MojoDestroyMessage.
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        part.as_ptr(),
+                        buffer.cast::<u8>().add(offset),
+                        part.len(),
+                    );
+                }
+            }
+            offset += part.len();
+        }
+    }
+    Ok(message)
+}
+
 /// Append data to the message's payload. Returns the number of bytes written.
 ///
 /// This will append the contents of `bytes` and `handles` to the message's
@@ -376,4 +479,99 @@ pub fn MojoNotifyBadMessage(message: &mut MessageHandle, error_msg: &str) {
     // This should only fail if the message handle is invalid and we guarantee
     // that it's valid as part of this type.
     debug_assert!(MojoError::result_from_code(ret).is_ok())
+}
+
+#[cfg(test)]
+mod parts_tests {
+    use super::*;
+
+    #[test]
+    fn parts_size_checks_native_and_pointer_limits_without_allocating() {
+        assert_eq!(checked_parts_size([]), Ok(0));
+        assert_eq!(checked_parts_size([0, 3, 0, 4]), Ok(7));
+        let limit = (u32::MAX as usize).min(isize::MAX as usize);
+        assert_eq!(checked_parts_size([limit]), Ok(limit as u32));
+        assert_eq!(
+            checked_parts_size([limit, 1]),
+            Err(MojoError::ResourceExhausted)
+        );
+        assert_eq!(
+            checked_parts_size([usize::MAX]),
+            Err(MojoError::ResourceExhausted)
+        );
+    }
+
+    #[test]
+    #[ignore = "requires MOJO_NATIVE_LIB pointing to the trusted pinned SDK runtime"]
+    fn fresh_parts_are_committed_and_transfer_handles_once() {
+        use crate::message_pipe::{MojoCreateMessagePipe, MojoReadMessage, MojoWriteMessage};
+        let library = std::path::PathBuf::from(
+            std::env::var_os("MOJO_NATIVE_LIB").expect("set MOJO_NATIVE_LIB for this native test"),
+        );
+        // SAFETY: this opt-in test explicitly requires the authentic SDK image.
+        unsafe { raw_ffi::initialize(&library, true) }.unwrap();
+
+        fn read_local(endpoint: &UntypedHandle) -> MojoResult<MessageHandle> {
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            loop {
+                match MojoReadMessage(endpoint) {
+                    Err(MojoError::ShouldWait) if std::time::Instant::now() < deadline => {
+                        std::thread::yield_now();
+                    }
+                    result => return result,
+                }
+            }
+        }
+
+        // A zero-length fresh message is committed even with no nonempty part.
+        let empty = MojoCreateMessageWithDataParts(&[&[], &[]], vec![]).unwrap();
+        match MojoGetMessageData(&empty, None) {
+            GetMessageDataStatus::Success { bytes, .. } => assert!(bytes.is_empty()),
+            _ => panic!("empty parts message was not committed"),
+        }
+
+        let payload: Vec<u8> = (0..1_048_576).map(|i| (i % 256) as u8).collect();
+        let (attachment, attachment_peer) = MojoCreateMessagePipe().unwrap();
+        let message =
+            MojoCreateMessageWithDataParts(&[b"header", &[], &payload, b"tail"], vec![attachment])
+                .unwrap();
+        let (sender, receiver) = MojoCreateMessagePipe().unwrap();
+        // No second append/commit call is made before sending.
+        MojoWriteMessage(&sender, message).unwrap();
+        let received = read_local(&receiver).unwrap();
+        let mut handles = Vec::with_capacity(1);
+        let written = match MojoGetMessageData(&received, Some(handles.spare_capacity_mut())) {
+            GetMessageDataStatus::Success {
+                bytes,
+                num_handles_written,
+            } => {
+                assert_eq!(bytes.len(), 6 + payload.len() + 4);
+                assert_eq!(&bytes[..6], b"header");
+                assert_eq!(&bytes[6..6 + payload.len()], payload.as_slice());
+                assert_eq!(&bytes[6 + payload.len()..], b"tail");
+                assert_eq!(num_handles_written, 1);
+                num_handles_written
+            }
+            _ => panic!("committed parts message could not be read"),
+        };
+        // SAFETY: the successful call above initialized exactly `written`
+        // handles within the single reserved slot.
+        unsafe { handles.set_len(written) };
+        let transferred = handles.pop().unwrap();
+        let ping = MojoCreateMessageWithDataParts(&[b"live"], vec![]).unwrap();
+        MojoWriteMessage(&transferred, ping).unwrap();
+        let pong = read_local(&attachment_peer).unwrap();
+        match MojoGetMessageData(&pong, None) {
+            GetMessageDataStatus::Success { bytes, .. } => assert_eq!(bytes, b"live"),
+            _ => panic!("transferred attachment was not live"),
+        }
+
+        // Destruction before send closes its owned attachment, exactly once.
+        let (to_drop, observer) = MojoCreateMessagePipe().unwrap();
+        drop(MojoCreateMessageWithDataParts(&[b"unsent"], vec![to_drop]).unwrap());
+        assert!(matches!(
+            read_local(&observer),
+            Err(MojoError::FailedPrecondition)
+        ));
+    }
 }

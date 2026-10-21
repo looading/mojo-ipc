@@ -1,12 +1,17 @@
 [package]
 name = "mojom-codec"
-version = "0.1.0"
-edition = "2024"
-license = "BSD-3-Clause"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Mojom codec facade for the unofficial Chromium Mojo Rust SDK"
+readme = "README.md"
 
 [package.metadata.mojo]
 chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
 
 [dependencies]
-mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core" }
-parsing_attribute = { package = "mojom-derive", path = "../mojom-derive" }
+mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core", version = "=0.2.0" }
+parsing_attribute = { package = "mojom-derive", path = "../mojom-derive", version = "=0.2.0" }

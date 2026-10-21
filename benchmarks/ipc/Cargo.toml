@@ -1,0 +1,16 @@
+[package]
+name = "mojo-ipc-bench"
+default-run = "mojo-ipc-bench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ipc = { package = "mojo-ipc", path = "../../crates/mojo-ipc", version = "=0.2.0" }
+anyhow.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+mojom-build = { path = "../../crates/mojom-build", version = "=0.2.0" }

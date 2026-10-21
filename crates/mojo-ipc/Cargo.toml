@@ -3,7 +3,11 @@ name = "mojo-ipc"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 publish.workspace = true
+description = "Standalone Rust IPC SDK using the pinned Chromium Mojo runtime"
+readme = "README.md"
 
 [dependencies]
 raw_ffi.workspace = true

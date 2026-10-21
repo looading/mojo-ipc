@@ -163,9 +163,19 @@ impl From<WritableMessage> for SendableMessage {
 }
 
 /// Sendable implementation, the second State of `MojoMessage`.
-/// Sendable messages should have no methods. They are to be consumed by the
-/// Mojo message pipe when writing to a message pipe endpoint.
-impl SendableMessage {}
+impl SendableMessage {
+    /// Create a fresh, already committed message from ordered byte slices.
+    ///
+    /// Copies the parts directly into one Core buffer, without a concatenated
+    /// Rust staging allocation or a separate commit call. On error, ownership
+    /// of all handles is returned to the caller unchanged.
+    pub fn new_with_data_parts(
+        parts: &[&[u8]],
+        handles: Vec<UntypedHandle>,
+    ) -> Result<Self, (MojoError, Vec<UntypedHandle>)> {
+        message::MojoCreateMessageWithDataParts(parts, handles).map(Self::from)
+    }
+}
 
 impl ReadableWithHandlesMessage {
     /// Retrieve the attached handles from this message object.

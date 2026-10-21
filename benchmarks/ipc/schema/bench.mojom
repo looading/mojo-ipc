@@ -1,0 +1,75 @@
+module benchmark;
+
+enum ComplexStatus {
+  Red = -3,
+  Green = 7,
+  Blue = 99,
+};
+
+struct ComplexRecord {
+  uint64 sequence;
+  ComplexStatus status;
+  int32 delta;
+  bool enabled;
+  double ratio;
+  string title;
+  array<uint8> data;
+  string? note;
+};
+
+union ComplexChoice {
+  string Text;
+  ComplexRecord Record;
+  array<int64> Numbers;
+  double Metric;
+};
+
+struct ComplexEnvelope {
+  ComplexStatus status;
+  ComplexRecord? primary;
+  array<ComplexRecord?>? records;
+  array<array<uint32>?>? matrix;
+  map<string, ComplexChoice?>? choices;
+  array<double?> samples;
+  string? note;
+};
+
+interface Bench {
+  Info() => (uint32 pid);
+  Echo(uint64 id, array<uint8> data) => (uint64 echoed_id, array<uint8> echoed_data);
+  Reset(uint32 payload_size) => ();
+  Push(uint64 id, array<uint8> data);
+  Inspect() => (uint64 received, uint64 bytes, bool valid, uint64 held);
+  Hold(uint64 id) => (uint64 echoed_id);
+  Crash();
+  EchoBool(uint64 id, array<bool> data) => (uint64 echoed_id, array<bool> echoed_data);
+  EchoInt8(uint64 id, array<int8> data) => (uint64 echoed_id, array<int8> echoed_data);
+  EchoInt16(uint64 id, array<int16> data) => (uint64 echoed_id, array<int16> echoed_data);
+  EchoUint16(uint64 id, array<uint16> data) => (uint64 echoed_id, array<uint16> echoed_data);
+  EchoInt32(uint64 id, array<int32> data) => (uint64 echoed_id, array<int32> echoed_data);
+  EchoUint32(uint64 id, array<uint32> data) => (uint64 echoed_id, array<uint32> echoed_data);
+  EchoInt64(uint64 id, array<int64> data) => (uint64 echoed_id, array<int64> echoed_data);
+  EchoUint64(uint64 id, array<uint64> data) => (uint64 echoed_id, array<uint64> echoed_data);
+  EchoFloat(uint64 id, array<float> data) => (uint64 echoed_id, array<float> echoed_data);
+  EchoDouble(uint64 id, array<double> data) => (uint64 echoed_id, array<double> echoed_data);
+  EchoNullableBool(uint64 id, array<bool?> data) => (uint64 echoed_id, array<bool?> echoed_data);
+  EchoNullableInt8(uint64 id, array<int8?> data) => (uint64 echoed_id, array<int8?> echoed_data);
+  EchoNullableUint8(uint64 id, array<uint8?> data) => (uint64 echoed_id, array<uint8?> echoed_data);
+  EchoNullableInt16(uint64 id, array<int16?> data) => (uint64 echoed_id, array<int16?> echoed_data);
+  EchoNullableUint16(uint64 id, array<uint16?> data) => (uint64 echoed_id, array<uint16?> echoed_data);
+  EchoNullableInt32(uint64 id, array<int32?> data) => (uint64 echoed_id, array<int32?> echoed_data);
+  EchoNullableUint32(uint64 id, array<uint32?> data) => (uint64 echoed_id, array<uint32?> echoed_data);
+  EchoNullableInt64(uint64 id, array<int64?> data) => (uint64 echoed_id, array<int64?> echoed_data);
+  EchoNullableUint64(uint64 id, array<uint64?> data) => (uint64 echoed_id, array<uint64?> echoed_data);
+  EchoNullableFloat(uint64 id, array<float?> data) => (uint64 echoed_id, array<float?> echoed_data);
+  EchoNullableDouble(uint64 id, array<double?> data) => (uint64 echoed_id, array<double?> echoed_data);
+  EchoComplexString(uint64 id, string data) => (uint64 echoed_id, string echoed_data);
+  EchoComplexRecord(uint64 id, ComplexRecord data) => (uint64 echoed_id, ComplexRecord echoed_data);
+  EchoComplexRecords(uint64 id, array<ComplexRecord> data) => (uint64 echoed_id, array<ComplexRecord> echoed_data);
+  EchoComplexNested(uint64 id, array<array<uint32>> data) => (uint64 echoed_id, array<array<uint32>> echoed_data);
+  EchoComplexStringMap(uint64 id, map<string, ComplexRecord> data) => (uint64 echoed_id, map<string, ComplexRecord> echoed_data);
+  EchoComplexNumericMap(uint64 id, map<int32, array<uint8>> data) => (uint64 echoed_id, map<int32, array<uint8>> echoed_data);
+  EchoComplexUnions(uint64 id, array<ComplexChoice> data) => (uint64 echoed_id, array<ComplexChoice> echoed_data);
+  EchoComplexNullable(uint64 id, array<ComplexEnvelope?> data) => (uint64 echoed_id, array<ComplexEnvelope?> echoed_data);
+  EchoComplexStrings(uint64 id, array<string> data) => (uint64 echoed_id, array<string> echoed_data);
+};

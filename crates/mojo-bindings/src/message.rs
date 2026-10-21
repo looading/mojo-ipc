@@ -109,10 +109,14 @@ impl From<MojomMessage> for SendableMessage {
             msg.raw_message_handle.is_none(),
             "Cannot re-send an incoming message"
         );
-        let (payload, handles) = msg.into_data();
+        let MojomMessage {
+            header,
+            payload,
+            handles,
+            raw_message_handle: _,
+        } = msg;
+        let (header, header_len) = header.serialize_stack();
         // This can only fail if we're out of memory
-        WritableMessage::new_with_data(&payload, handles)
-            .unwrap()
-            .into()
+        SendableMessage::new_with_data_parts(&[&header[..header_len], &payload], handles).unwrap()
     }
 }

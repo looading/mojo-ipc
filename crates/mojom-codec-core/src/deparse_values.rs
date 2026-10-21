@@ -137,7 +137,8 @@ macro_rules! write_or_extract_nullable {
         match flatten_possibly_nullable_value($val, $is_nullable)? {
             None => {
                 // For a null value, we need only write a bunch of 0s
-                $data.extend(vec![$none_indicator_byte; $num_bytes]);
+                let new_len = $data.len() + $num_bytes;
+                $data.resize(new_len, $none_indicator_byte);
                 continue;
             }
             Some(v) => v,
@@ -162,7 +163,8 @@ macro_rules! wrong_type {
 fn pad_to_alignment(data: &mut DeparsedData, alignment: usize) {
     let mismatch = data.len() % alignment;
     if mismatch != 0 {
-        data.extend(vec![0; alignment - mismatch])
+        let new_len = data.len() + alignment - mismatch;
+        data.resize(new_len, 0)
     }
 }
 
@@ -276,6 +278,88 @@ struct NestedDataInfo<'a> {
     ptr_loc: usize,
 }
 
+fn nested_value<'a>(
+    nested_data_value: MojomValue,
+    nested_data_type: &'a PackedStructuredType,
+) -> Result<NestedData<'a>> {
+    Ok(match (nested_data_value, nested_data_type) {
+        (
+            MojomValue::Struct(_field_names, nested_data_fields),
+            PackedStructuredType::Struct {
+                packed_field_types,
+                packed_field_names: _,
+                num_elements_in_value: _,
+            },
+        ) => NestedData::Struct {
+            field_values: nested_data_fields,
+            packed_fields: packed_field_types,
+        },
+        (
+            nested_data_value @ (MojomValue::Array(_)
+            | MojomValue::ByteArray(_)
+            | MojomValue::PrimitiveArray(_)
+            | MojomValue::NullablePrimitiveArray(_)
+            | MojomValue::String(_)),
+            PackedStructuredType::Array {
+                element_type,
+                array_type,
+            },
+        ) => NestedData::Array {
+            contents: nested_data_value,
+            element_type,
+            array_type,
+        },
+        (MojomValue::Union(tag, value), PackedStructuredType::Union { variants, .. }) => {
+            NestedData::Union {
+                tag,
+                value: *value,
+                variants,
+            }
+        }
+        (
+            MojomValue::Map(values_map),
+            PackedStructuredType::Map {
+                key_type,
+                value_type,
+            },
+        ) => NestedData::Map {
+            values_map,
+            key_type,
+            value_type,
+        },
+        (_, nested_data_value) => bail!(
+            "Unexpected type for nested data: Expected {:?}, got {:?}",
+            nested_data_type,
+            nested_data_value
+        ),
+    })
+}
+
+fn deparse_nested_data(data: &mut DeparsedData, nested_data: NestedData<'_>) -> Result<()> {
+    match nested_data {
+        NestedData::Struct {
+            field_values,
+            packed_fields,
+        } => deparse_struct(data, field_values, packed_fields)?,
+        NestedData::Array {
+            contents,
+            element_type,
+            array_type,
+        } => deparse_array(data, contents, element_type, array_type)?,
+        NestedData::Union {
+            tag,
+            value,
+            variants,
+        } => deparse_union(data, None, tag, value, variants)?,
+        NestedData::Map {
+            values_map,
+            key_type,
+            value_type,
+        } => deparse_map(data, values_map, key_type, value_type)?,
+    }
+    Ok(())
+}
+
 /// Overwrite data[start..start+len] with the contents of `value`.
 /// Panics if the range doesn't exist or the `value` is too short, probably.
 fn write_to_slice(data: &mut [u8], start: usize, len: usize, value: &[u8]) {
@@ -312,6 +396,107 @@ fn deparse_array(
         }
         (
             PackedArrayType::SizedArray(_) | PackedArrayType::UnsizedArray,
+            MojomValue::NullablePrimitiveArray(array),
+        ) => {
+            if !matches!(&**element_type, MojomWireType::Leaf { leaf_type, is_nullable: true } if *leaf_type == array.leaf_type())
+            {
+                bail!(
+                    "NullablePrimitiveArray type {:?} does not match {element_type:?}",
+                    array.leaf_type()
+                );
+            }
+            if let PackedArrayType::SizedArray(expected) = array_type
+                && *expected != array.len()
+            {
+                bail!(
+                    "Array type expected {expected} elements but had {} elements.",
+                    array.len()
+                );
+            }
+            let count =
+                u32::try_from(array.len()).context("Mojom array element count exceeds u32")?;
+            let layout = crate::nullable_array::layout(&array.leaf_type(), array.len())
+                .context("Mojom nullable array storage overflow")?;
+            let size = layout
+                .body_size
+                .checked_add(8)
+                .and_then(|size| u32::try_from(size).ok())
+                .context("Mojom nullable array size exceeds u32")?;
+            data.extend(size.to_le_bytes());
+            data.extend(count.to_le_bytes());
+            array.append_payload(data, layout);
+            pad_to_alignment(data, 8);
+            return Ok(());
+        }
+        (
+            PackedArrayType::SizedArray(_) | PackedArrayType::UnsizedArray,
+            MojomValue::PrimitiveArray(array),
+        ) => {
+            if !matches!(&**element_type, MojomWireType::Leaf { leaf_type, is_nullable: false } if *leaf_type == array.leaf_type())
+            {
+                bail!(
+                    "PrimitiveArray type {:?} does not match {element_type:?}",
+                    array.leaf_type()
+                );
+            }
+            if let PackedArrayType::SizedArray(expected) = array_type
+                && *expected != array.len()
+            {
+                bail!(
+                    "Array type expected {expected} elements but had {} elements.",
+                    array.len()
+                );
+            }
+            let count =
+                u32::try_from(array.len()).context("Mojom array element count exceeds u32")?;
+            let storage = crate::primitive_array::payload_size(&array.leaf_type(), array.len())
+                .context("Mojom primitive array storage overflow")?;
+            let size = storage
+                .checked_add(8)
+                .and_then(|size| u32::try_from(size).ok())
+                .context("Mojom primitive array size exceeds u32")?;
+            data.extend(size.to_le_bytes());
+            data.extend(count.to_le_bytes());
+            array.append_payload(data);
+            pad_to_alignment(data, 8);
+            return Ok(());
+        }
+        (
+            PackedArrayType::SizedArray(_) | PackedArrayType::UnsizedArray,
+            MojomValue::ByteArray(bytes),
+        ) => {
+            if !matches!(
+                &**element_type,
+                MojomWireType::Leaf {
+                    leaf_type: PackedLeafType::UInt8,
+                    is_nullable: false,
+                }
+            ) {
+                bail!("ByteArray requires non-nullable uint8 elements, got {element_type:?}");
+            }
+            if let PackedArrayType::SizedArray(expected) = array_type
+                && *expected != bytes.len()
+            {
+                bail!(
+                    "Array type expected {expected} elements but had {} elements.",
+                    bytes.len()
+                );
+            }
+            let num_elements =
+                u32::try_from(bytes.len()).context("Mojom array element count exceeds u32")?;
+            let size = num_elements
+                .checked_add(8)
+                .context("Mojom byte array size exceeds u32")?;
+            data.extend(size.to_le_bytes());
+            data.extend(num_elements.to_le_bytes());
+            data.extend_from_slice(&bytes);
+            // The array header excludes final alignment padding, exactly as
+            // the generic structured-body encoder does.
+            pad_to_alignment(data, 8);
+            return Ok(());
+        }
+        (
+            PackedArrayType::SizedArray(_) | PackedArrayType::UnsizedArray,
             MojomValue::Array(element_values),
         ) => element_values,
         (array_type, contents) => {
@@ -328,6 +513,38 @@ fn deparse_array(
             "Array type expected {expected_num_elements} elements but had {num_elements} elements."
         )
     };
+
+    if let MojomWireType::Pointer {
+        nested_data_type,
+        is_nullable,
+    } = &**element_type
+    {
+        // All array slots share the same pointer schema. Reserve the inline
+        // pointer table, then consume each value directly in wire order. The
+        // general struct path would allocate one large deferred-data record
+        // per element and repeatedly move values out of the AST by ordinal.
+        let body_size = num_elements
+            .checked_mul(8)
+            .and_then(|n| n.checked_add(8))
+            .and_then(|n| u32::try_from(n).ok())
+            .context("Mojom pointer array size exceeds u32")?;
+        let count = u32::try_from(num_elements).context("Mojom array element count exceeds u32")?;
+        let start = data.len();
+        data.extend(body_size.to_le_bytes());
+        data.extend(count.to_le_bytes());
+        data.resize(start + body_size as usize, 0);
+        for (index, value) in element_values.into_iter().enumerate() {
+            let Some(value) = flatten_possibly_nullable_value(value, *is_nullable)? else {
+                continue;
+            };
+            let ptr_loc = start + 8 + index * 8;
+            let relative = u64::try_from(data.len() - ptr_loc)
+                .context("Mojom array pointer offset exceeds u64")?;
+            write_to_slice(data, ptr_loc, 8, &relative.to_le_bytes());
+            deparse_nested_data(data, nested_value(value, nested_data_type)?)?;
+        }
+        return Ok(());
+    }
 
     data.extend([0; 4]); // Size field of the header; we'll fill this in later
 
@@ -352,9 +569,9 @@ fn deparse_union<'a>(
     variants: &'a BTreeMap<i32, MojomWireType>,
 ) -> Result<()> {
     // Write the union's header
-    let expected_wire_type = variants.get(&tag).context(format!(
-        "Tag value {tag} is not a valid discriminant for this union!"
-    ))?;
+    let expected_wire_type = variants
+        .get(&tag)
+        .with_context(|| format!("Tag value {tag} is not a valid discriminant for this union!"))?;
 
     data.extend([0; 4]); // Size; we'll fill this in later
     data.extend(tag.to_le_bytes()); // Union tag
@@ -378,9 +595,30 @@ fn deparse_map(
     value_type: &Arc<MojomWireType>,
 ) -> Result<()> {
     let (keys, values) = values_map.into_iter().unzip();
-    let field_values = vec![MojomValue::Array(keys), MojomValue::Array(values)];
-    let packed_fields = convert_map_ty_to_struct_fields(key_type, value_type);
-    deparse_struct(data, field_values, &packed_fields)
+    // A map's inline struct always consists of two non-null array pointers.
+    // Write that fixed body directly, avoiding a temporary two-field AST and
+    // the structured body's deferred-pointer allocation. Arrays retain the
+    // same ordered values and all normal element validation.
+    let start = data.len();
+    data.extend(24u32.to_le_bytes());
+    data.extend(0u32.to_le_bytes());
+    data.extend(16u64.to_le_bytes());
+    data.extend(0u64.to_le_bytes());
+    deparse_array(
+        data,
+        MojomValue::Array(keys),
+        key_type,
+        &PackedArrayType::UnsizedArray,
+    )?;
+    let values_offset = u64::try_from(data.len() - (start + 16))
+        .context("Mojom map value array offset exceeds u64")?;
+    write_to_slice(data, start + 16, 8, &values_offset.to_le_bytes());
+    deparse_array(
+        data,
+        MojomValue::Array(values),
+        value_type,
+        &PackedArrayType::UnsizedArray,
+    )
 }
 
 fn deparse_string(data: &mut DeparsedData, value: String) -> Result<()> {
@@ -504,54 +742,7 @@ where
                         let nested_data_value = take_field_at_ordinal(&mut field_values, ordinal)?;
                         let nested_data_value =
                             write_or_extract_nullable!(data, nested_data_value, *is_nullable, 8);
-                        let nested_data = match (nested_data_value, nested_data_type) {
-                            (
-                                MojomValue::Struct(_field_names, nested_data_fields),
-                                PackedStructuredType::Struct {
-                                    packed_field_types,
-                                    packed_field_names: _,
-                                    num_elements_in_value: _,
-                                },
-                            ) => NestedData::Struct {
-                                field_values: nested_data_fields,
-                                packed_fields: packed_field_types,
-                            },
-                            (
-                                nested_data_value @ (MojomValue::Array(_) | MojomValue::String(_)),
-                                PackedStructuredType::Array {
-                                    element_type,
-                                    array_type,
-                                },
-                            ) => NestedData::Array {
-                                contents: nested_data_value,
-                                element_type,
-                                array_type,
-                            },
-                            (
-                                MojomValue::Union(tag, value),
-                                PackedStructuredType::Union { variants, .. },
-                            ) => NestedData::Union {
-                                tag,
-                                value: *value,
-                                variants,
-                            },
-                            (
-                                MojomValue::Map(values_map),
-                                PackedStructuredType::Map {
-                                    key_type,
-                                    value_type,
-                                },
-                            ) => NestedData::Map {
-                                values_map,
-                                key_type,
-                                value_type,
-                            },
-                            (_, nested_data_value) => bail!(
-                                "Unexpected type for nested data: Expected {:?}, got {:?}",
-                                nested_data_type,
-                                nested_data_value
-                            ),
-                        };
+                        let nested_data = nested_value(nested_data_value, nested_data_type)?;
                         nested_data_list.push(NestedDataInfo {
                             nested_data,
                             ptr_loc: data.len(),
@@ -616,27 +807,7 @@ where
             &u64::to_le_bytes(bytes_from_ptr.try_into().unwrap()),
         );
 
-        match nested_data_info.nested_data {
-            NestedData::Struct {
-                field_values,
-                packed_fields,
-            } => deparse_struct(data, field_values, packed_fields)?,
-            NestedData::Array {
-                contents,
-                element_type,
-                array_type,
-            } => deparse_array(data, contents, element_type, array_type)?,
-            NestedData::Union {
-                tag,
-                value,
-                variants,
-            } => deparse_union(data, None, tag, value, variants)?,
-            NestedData::Map {
-                values_map,
-                key_type,
-                value_type,
-            } => deparse_map(data, values_map, key_type, value_type)?,
-        }
+        deparse_nested_data(data, nested_data_info.nested_data)?;
     }
 
     Ok(())
@@ -706,7 +877,11 @@ pub fn deparse_single_value_for_testing(
                     },
                 ..
             },
-            value @ (MojomValue::Array(_) | MojomValue::String(_)),
+            value @ (MojomValue::Array(_)
+            | MojomValue::ByteArray(_)
+            | MojomValue::PrimitiveArray(_)
+            | MojomValue::NullablePrimitiveArray(_)
+            | MojomValue::String(_)),
         ) => deparse_array(&mut data, value, element_type, array_type)?,
         (
             MojomWireType::Union { variants, .. }

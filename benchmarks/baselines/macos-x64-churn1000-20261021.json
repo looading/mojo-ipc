@@ -1,0 +1,2373 @@
+{
+  "snapshot_schema_version": 1,
+  "scope": "Lifecycle-focused run. iterations=1, warmup=0 and sample-ms=0; performance numbers are smoke measurements and must not replace the separate warmed performance baseline. Complete result plus selected environment and resource evidence; paths, PIDs, event stream and periodic RSS series omitted.",
+  "metadata": {
+    "started_utc": "2026-10-20T18:18:27.658503+00:00",
+    "completed_utc": "2026-10-20T18:19:06.800158+00:00",
+    "elapsed_seconds": 39.14148314900012,
+    "os": "macOS-26.7.1-x86_64-i386-64bit",
+    "hardware": {
+      "machine": "x86_64",
+      "processor": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+      "logical_cpus": 12,
+      "physical_cpus": 6,
+      "memory_bytes": 34359738368,
+      "model": "MacBookPro16,1"
+    },
+    "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-apple-darwin\nrelease: 1.96.0\nLLVM version: 22.1.2",
+    "cargo": "cargo 1.96.0 (30a34c682 2026-05-25)",
+    "repository_commit": "6ff82baa84021ce3f06ace4424ffef1bc785a8ca",
+    "binary_sha256": "88b70d14458040963fa2efb9b184da0ea00799d7821505580900394182b9824c",
+    "repository_state_note": "Benchmark sources were uncommitted. repository_commit alone does not identify the benchmark source.",
+    "native_library": {
+      "sha256": "ab9bc6337bc313547b88f3b812f5b4ad138bd6e89a0c0bbc545c20227c867c49",
+      "size": 3117152
+    }
+  },
+  "result": {
+    "arch": "x86_64",
+    "chromium_revision": "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd",
+    "churn": {
+      "cycle_latency": {
+        "max_us": 105943.253,
+        "mean_us": 17630.156682999997,
+        "min_us": 14513.187,
+        "p50_us": 17481.899,
+        "p90_us": 18294.093,
+        "p95_us": 18841.939,
+        "p99_us": 23846.84,
+        "samples": 1000
+      },
+      "cycles": 1000,
+      "enabled": true,
+      "passed": true
+    },
+    "codec_only": [
+      {
+        "codec_pairs_per_second": 13048.868010700071,
+        "completed": 1,
+        "decode_latency": {
+          "max_us": 16.721,
+          "mean_us": 16.721,
+          "min_us": 16.721,
+          "observations": 1,
+          "p50_us": 16.721,
+          "p90_us": 16.721,
+          "p95_us": 16.721,
+          "p99_us": 16.721,
+          "samples": 1
+        },
+        "elapsed_seconds": 7.6635e-05,
+        "encode_latency": {
+          "max_us": 54.772,
+          "mean_us": 54.772,
+          "min_us": 54.772,
+          "observations": 1,
+          "p50_us": 54.772,
+          "p90_us": 54.772,
+          "p95_us": 54.772,
+          "p99_us": 54.772,
+          "samples": 1
+        },
+        "encode_plus_decode_payload_mib_per_second": 0.0,
+        "encoded_body_bytes": 32,
+        "latency_sampling": {
+          "capacity": 100000,
+          "min_mean_max": "all completed observations",
+          "mode": "all",
+          "quantiles": "nearest-rank of stored samples"
+        },
+        "minimum_pairs": 1,
+        "name": "codec_only",
+        "native_runtime_required": false,
+        "payload_bytes": 0,
+        "payload_mib_per_second": 0.0,
+        "scope": "in-process Mojom encode/decode; not an IPC measurement",
+        "throughput_scope": "full pair loop including input clone and output validation; one payload per pair",
+        "warmup_pairs": 0
+      },
+      {
+        "codec_pairs_per_second": 20042.49007896741,
+        "completed": 1,
+        "decode_latency": {
+          "max_us": 39.836,
+          "mean_us": 39.836,
+          "min_us": 39.836,
+          "observations": 1,
+          "p50_us": 39.836,
+          "p90_us": 39.836,
+          "p95_us": 39.836,
+          "p99_us": 39.836,
+          "samples": 1
+        },
+        "elapsed_seconds": 4.9894e-05,
+        "encode_latency": {
+          "max_us": 9.145,
+          "mean_us": 9.145,
+          "min_us": 9.145,
+          "observations": 1,
+          "p50_us": 9.145,
+          "p90_us": 9.145,
+          "p95_us": 9.145,
+          "p99_us": 9.145,
+          "samples": 1
+        },
+        "encode_plus_decode_payload_mib_per_second": 2.4465930272177014,
+        "encoded_body_bytes": 96,
+        "latency_sampling": {
+          "capacity": 100000,
+          "min_mean_max": "all completed observations",
+          "mode": "all",
+          "quantiles": "nearest-rank of stored samples"
+        },
+        "minimum_pairs": 1,
+        "name": "codec_only",
+        "native_runtime_required": false,
+        "payload_bytes": 64,
+        "payload_mib_per_second": 1.2232965136088507,
+        "scope": "in-process Mojom encode/decode; not an IPC measurement",
+        "throughput_scope": "full pair loop including input clone and output validation; one payload per pair",
+        "warmup_pairs": 0
+      },
+      {
+        "codec_pairs_per_second": 1504.3294601864163,
+        "completed": 1,
+        "decode_latency": {
+          "max_us": 580.892,
+          "mean_us": 580.892,
+          "min_us": 580.892,
+          "observations": 1,
+          "p50_us": 580.892,
+          "p90_us": 580.892,
+          "p95_us": 580.892,
+          "p99_us": 580.892,
+          "samples": 1
+        },
+        "elapsed_seconds": 0.000664748,
+        "encode_latency": {
+          "max_us": 82.392,
+          "mean_us": 82.392,
+          "min_us": 82.392,
+          "observations": 1,
+          "p50_us": 82.392,
+          "p90_us": 82.392,
+          "p95_us": 82.392,
+          "p99_us": 82.392,
+          "samples": 1
+        },
+        "encode_plus_decode_payload_mib_per_second": 2.9381434769265944,
+        "encoded_body_bytes": 1056,
+        "latency_sampling": {
+          "capacity": 100000,
+          "min_mean_max": "all completed observations",
+          "mode": "all",
+          "quantiles": "nearest-rank of stored samples"
+        },
+        "minimum_pairs": 1,
+        "name": "codec_only",
+        "native_runtime_required": false,
+        "payload_bytes": 1024,
+        "payload_mib_per_second": 1.4690717384632972,
+        "scope": "in-process Mojom encode/decode; not an IPC measurement",
+        "throughput_scope": "full pair loop including input clone and output validation; one payload per pair",
+        "warmup_pairs": 0
+      },
+      {
+        "codec_pairs_per_second": 29.10066913787609,
+        "completed": 1,
+        "decode_latency": {
+          "max_us": 29462.085,
+          "mean_us": 29462.085,
+          "min_us": 29462.085,
+          "observations": 1,
+          "p50_us": 29462.085,
+          "p90_us": 29462.085,
+          "p95_us": 29462.085,
+          "p99_us": 29462.085,
+          "samples": 1
+        },
+        "elapsed_seconds": 0.034363471,
+        "encode_latency": {
+          "max_us": 4589.804,
+          "mean_us": 4589.804,
+          "min_us": 4589.804,
+          "observations": 1,
+          "p50_us": 4589.804,
+          "p90_us": 4589.804,
+          "p95_us": 4589.804,
+          "p99_us": 4589.804,
+          "samples": 1
+        },
+        "encode_plus_decode_payload_mib_per_second": 3.637583642234511,
+        "encoded_body_bytes": 65568,
+        "latency_sampling": {
+          "capacity": 100000,
+          "min_mean_max": "all completed observations",
+          "mode": "all",
+          "quantiles": "nearest-rank of stored samples"
+        },
+        "minimum_pairs": 1,
+        "name": "codec_only",
+        "native_runtime_required": false,
+        "payload_bytes": 65536,
+        "payload_mib_per_second": 1.8187918211172556,
+        "scope": "in-process Mojom encode/decode; not an IPC measurement",
+        "throughput_scope": "full pair loop including input clone and output validation; one payload per pair",
+        "warmup_pairs": 0
+      },
+      {
+        "codec_pairs_per_second": 2.1530972827615162,
+        "completed": 1,
+        "decode_latency": {
+          "max_us": 396093.697,
+          "mean_us": 396093.697,
+          "min_us": 396093.697,
+          "observations": 1,
+          "p50_us": 396093.697,
+          "p90_us": 396093.697,
+          "p95_us": 396093.697,
+          "p99_us": 396093.697,
+          "samples": 1
+        },
+        "elapsed_seconds": 0.464447198,
+        "encode_latency": {
+          "max_us": 68003.572,
+          "mean_us": 68003.572,
+          "min_us": 68003.572,
+          "observations": 1,
+          "p50_us": 68003.572,
+          "p90_us": 68003.572,
+          "p95_us": 68003.572,
+          "p99_us": 68003.572,
+          "samples": 1
+        },
+        "encode_plus_decode_payload_mib_per_second": 4.3061945655230325,
+        "encoded_body_bytes": 1048608,
+        "latency_sampling": {
+          "capacity": 100000,
+          "min_mean_max": "all completed observations",
+          "mode": "all",
+          "quantiles": "nearest-rank of stored samples"
+        },
+        "minimum_pairs": 1,
+        "name": "codec_only",
+        "native_runtime_required": false,
+        "payload_bytes": 1048576,
+        "payload_mib_per_second": 2.1530972827615162,
+        "scope": "in-process Mojom encode/decode; not an IPC measurement",
+        "throughput_scope": "full pair loop including input clone and output validation; one payload per pair",
+        "warmup_pairs": 0
+      }
+    ],
+    "compiler": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "configuration": {
+      "churn": 1000,
+      "iterations": 1,
+      "sample_ms": 0,
+      "stress_seconds": 0,
+      "timeout_seconds": 15,
+      "warmup": 0,
+      "window": 1
+    },
+    "correctness_boundary_echoes": 128,
+    "crash": {
+      "expected_exit_code": 17,
+      "final_pending": 0,
+      "held_requests": 64,
+      "passed": true,
+      "released_callbacks": 64,
+      "success_callbacks": 0
+    },
+    "latency_clock": "method call to callback entry; excludes payload preparation and callback validation",
+    "ok": true,
+    "opt_level": "3",
+    "optimized": true,
+    "os": "macos",
+    "performance": [
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000126944,
+        "final_pending": 0,
+        "latency": {
+          "max_us": 119.551,
+          "mean_us": 119.551,
+          "min_us": 119.551,
+          "p50_us": 119.551,
+          "p90_us": 119.551,
+          "p95_us": 119.551,
+          "p99_us": 119.551,
+          "samples": 1
+        },
+        "max_inflight": 1,
+        "max_pending": 1,
+        "max_rtt_us": 119.551,
+        "name": "echo_serial",
+        "payload_both_directions_mib_per_second": 0.0,
+        "payload_bytes": 0,
+        "payload_one_direction_mib_per_second": 0.0,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 7877.489286614569,
+        "sent": 1,
+        "small_sample_tail_caution": true,
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "barriers": 1,
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000195193,
+        "final_pending": 0,
+        "messages_per_second": 5123.134538636119,
+        "name": "oneway_batched_barrier",
+        "payload_bytes": 0,
+        "payload_one_direction_mib_per_second": 0.0,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "sent": 1,
+        "valid": true,
+        "warmup_messages": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000277858,
+        "final_pending": 0,
+        "latency": {
+          "max_us": 261.229,
+          "mean_us": 261.229,
+          "min_us": 261.229,
+          "p50_us": 261.229,
+          "p90_us": 261.229,
+          "p95_us": 261.229,
+          "p99_us": 261.229,
+          "samples": 1
+        },
+        "max_inflight": 1,
+        "max_pending": 1,
+        "max_rtt_us": 261.229,
+        "name": "echo_serial",
+        "payload_both_directions_mib_per_second": 0.43932624757969896,
+        "payload_bytes": 64,
+        "payload_one_direction_mib_per_second": 0.21966312378984948,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 3598.960620172894,
+        "sent": 1,
+        "small_sample_tail_caution": true,
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "barriers": 1,
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000211056,
+        "final_pending": 0,
+        "messages_per_second": 4738.078993252976,
+        "name": "oneway_batched_barrier",
+        "payload_bytes": 64,
+        "payload_one_direction_mib_per_second": 0.2891893916780381,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "sent": 1,
+        "valid": true,
+        "warmup_messages": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.00120091,
+        "final_pending": 0,
+        "latency": {
+          "max_us": 1192.497,
+          "mean_us": 1192.497,
+          "min_us": 1192.497,
+          "p50_us": 1192.497,
+          "p90_us": 1192.497,
+          "p95_us": 1192.497,
+          "p99_us": 1192.497,
+          "samples": 1
+        },
+        "max_inflight": 1,
+        "max_pending": 1,
+        "max_rtt_us": 1192.497,
+        "name": "echo_serial",
+        "payload_both_directions_mib_per_second": 1.6263708354497841,
+        "payload_bytes": 1024,
+        "payload_one_direction_mib_per_second": 0.8131854177248921,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 832.7018677502895,
+        "sent": 1,
+        "small_sample_tail_caution": true,
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "barriers": 1,
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000641219,
+        "final_pending": 0,
+        "messages_per_second": 1559.5295834964343,
+        "name": "oneway_batched_barrier",
+        "payload_bytes": 1024,
+        "payload_one_direction_mib_per_second": 1.5229781088832366,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "sent": 1,
+        "valid": true,
+        "warmup_messages": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.068688219,
+        "final_pending": 0,
+        "latency": {
+          "max_us": 66428.193,
+          "mean_us": 66428.193,
+          "min_us": 66428.193,
+          "p50_us": 66428.193,
+          "p90_us": 66428.193,
+          "p95_us": 66428.193,
+          "p99_us": 66428.193,
+          "samples": 1
+        },
+        "max_inflight": 1,
+        "max_pending": 1,
+        "max_rtt_us": 66428.193,
+        "name": "echo_serial",
+        "payload_both_directions_mib_per_second": 1.8198171654443394,
+        "payload_bytes": 65536,
+        "payload_one_direction_mib_per_second": 0.9099085827221697,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 14.558537323554715,
+        "sent": 1,
+        "small_sample_tail_caution": true,
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "barriers": 1,
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.034729627,
+        "final_pending": 0,
+        "messages_per_second": 28.793859490630293,
+        "name": "oneway_batched_barrier",
+        "payload_bytes": 65536,
+        "payload_one_direction_mib_per_second": 1.7996162181643933,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "sent": 1,
+        "valid": true,
+        "warmup_messages": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.930872208,
+        "final_pending": 0,
+        "latency": {
+          "max_us": 930592.16,
+          "mean_us": 930592.16,
+          "min_us": 930592.16,
+          "p50_us": 930592.16,
+          "p90_us": 930592.16,
+          "p95_us": 930592.16,
+          "p99_us": 930592.16,
+          "samples": 1
+        },
+        "max_inflight": 1,
+        "max_pending": 1,
+        "max_rtt_us": 930592.16,
+        "name": "echo_serial",
+        "payload_both_directions_mib_per_second": 2.1485226251378213,
+        "payload_bytes": 1048576,
+        "payload_one_direction_mib_per_second": 1.0742613125689107,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 1.0742613125689107,
+        "sent": 1,
+        "small_sample_tail_caution": true,
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "barriers": 1,
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.441694539,
+        "final_pending": 0,
+        "messages_per_second": 2.264008068254609,
+        "name": "oneway_batched_barrier",
+        "payload_bytes": 1048576,
+        "payload_one_direction_mib_per_second": 2.264008068254609,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "sent": 1,
+        "valid": true,
+        "warmup_messages": 0,
+        "window": 1
+      }
+    ],
+    "profile": "release",
+    "raw_transport": [
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000209889,
+        "final_pending": null,
+        "frame_header_bytes": 8,
+        "latency": {
+          "max_us": 187.623,
+          "mean_us": 187.623,
+          "min_us": 187.623,
+          "p50_us": 187.623,
+          "p90_us": 187.623,
+          "p95_us": 187.623,
+          "p99_us": 187.623,
+          "samples": 1
+        },
+        "latency_clock": "send API entry to watcher callback entry; excludes frame preparation and reply validation",
+        "max_inflight": 1,
+        "max_pending": null,
+        "name": "raw_bytes_serial",
+        "payload_both_directions_mib_per_second": 0.0,
+        "payload_bytes": 0,
+        "payload_one_direction_mib_per_second": 0.0,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 4764.423099828958,
+        "sample_ms": 0,
+        "scope": "raw byte messages through Rust safe message APIs, MessagePipeWatcher, native IO/dispatch and mpsc; not bare Mojo Core",
+        "sent": 1,
+        "throughput_clock": "wall time including native message preparation, reply copying/validation, mpsc driving and drain",
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000175481,
+        "final_pending": null,
+        "frame_header_bytes": 8,
+        "latency": {
+          "max_us": 155.667,
+          "mean_us": 155.667,
+          "min_us": 155.667,
+          "p50_us": 155.667,
+          "p90_us": 155.667,
+          "p95_us": 155.667,
+          "p99_us": 155.667,
+          "samples": 1
+        },
+        "latency_clock": "send API entry to watcher callback entry; excludes frame preparation and reply validation",
+        "max_inflight": 1,
+        "max_pending": null,
+        "name": "raw_bytes_serial",
+        "payload_both_directions_mib_per_second": 0.695632646839259,
+        "payload_bytes": 64,
+        "payload_one_direction_mib_per_second": 0.3478163234196295,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 5698.622642907209,
+        "sample_ms": 0,
+        "scope": "raw byte messages through Rust safe message APIs, MessagePipeWatcher, native IO/dispatch and mpsc; not bare Mojo Core",
+        "sent": 1,
+        "throughput_clock": "wall time including native message preparation, reply copying/validation, mpsc driving and drain",
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000310571,
+        "final_pending": null,
+        "frame_header_bytes": 8,
+        "latency": {
+          "max_us": 150.733,
+          "mean_us": 150.733,
+          "min_us": 150.733,
+          "p50_us": 150.733,
+          "p90_us": 150.733,
+          "p95_us": 150.733,
+          "p99_us": 150.733,
+          "samples": 1
+        },
+        "latency_clock": "send API entry to watcher callback entry; excludes frame preparation and reply validation",
+        "max_inflight": 1,
+        "max_pending": null,
+        "name": "raw_bytes_serial",
+        "payload_both_directions_mib_per_second": 6.2888196257860525,
+        "payload_bytes": 1024,
+        "payload_one_direction_mib_per_second": 3.1444098128930262,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 3219.875648402459,
+        "sample_ms": 0,
+        "scope": "raw byte messages through Rust safe message APIs, MessagePipeWatcher, native IO/dispatch and mpsc; not bare Mojo Core",
+        "sent": 1,
+        "throughput_clock": "wall time including native message preparation, reply copying/validation, mpsc driving and drain",
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.000711392,
+        "final_pending": null,
+        "frame_header_bytes": 8,
+        "latency": {
+          "max_us": 686.929,
+          "mean_us": 686.929,
+          "min_us": 686.929,
+          "p50_us": 686.929,
+          "p90_us": 686.929,
+          "p95_us": 686.929,
+          "p99_us": 686.929,
+          "samples": 1
+        },
+        "latency_clock": "send API entry to watcher callback entry; excludes frame preparation and reply validation",
+        "max_inflight": 1,
+        "max_pending": null,
+        "name": "raw_bytes_serial",
+        "payload_both_directions_mib_per_second": 175.71184382169042,
+        "payload_bytes": 65536,
+        "payload_one_direction_mib_per_second": 87.85592191084521,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 1405.6947505735234,
+        "sample_ms": 0,
+        "scope": "raw byte messages through Rust safe message APIs, MessagePipeWatcher, native IO/dispatch and mpsc; not bare Mojo Core",
+        "sent": 1,
+        "throughput_clock": "wall time including native message preparation, reply copying/validation, mpsc driving and drain",
+        "warmup_requests": 0,
+        "window": 1
+      },
+      {
+        "completed": 1,
+        "effective_minimum_requests": 1,
+        "elapsed_seconds": 0.008600345,
+        "final_pending": null,
+        "frame_header_bytes": 8,
+        "latency": {
+          "max_us": 7944.997,
+          "mean_us": 7944.997,
+          "min_us": 7944.997,
+          "p50_us": 7944.997,
+          "p90_us": 7944.997,
+          "p95_us": 7944.997,
+          "p99_us": 7944.997,
+          "samples": 1
+        },
+        "latency_clock": "send API entry to watcher callback entry; excludes frame preparation and reply validation",
+        "max_inflight": 1,
+        "max_pending": null,
+        "name": "raw_bytes_serial",
+        "payload_both_directions_mib_per_second": 232.54881054190267,
+        "payload_bytes": 1048576,
+        "payload_one_direction_mib_per_second": 116.27440527095133,
+        "requested_iterations": 1,
+        "requested_warmup": 0,
+        "rpc_per_second": 116.27440527095133,
+        "sample_ms": 0,
+        "scope": "raw byte messages through Rust safe message APIs, MessagePipeWatcher, native IO/dispatch and mpsc; not bare Mojo Core",
+        "sent": 1,
+        "throughput_clock": "wall time including native message preparation, reply copying/validation, mpsc driving and drain",
+        "warmup_requests": 0,
+        "window": 1
+      }
+    ],
+    "schema_version": 1,
+    "scope": "typed Rust SDK end-to-end; includes encoding, native dispatch and harness overhead",
+    "sdk_version": "0.1.0",
+    "stress": {
+      "enabled": false
+    },
+    "target": "x86_64-apple-darwin",
+    "throughput_clock": "wall time including payload preparation, validation, mpsc driving and drain",
+    "validation_errors": 0
+  },
+  "resources_summary": {
+    "rss_interval_seconds": 1,
+    "measurement_notes": {
+      "rss": "Instantaneous resident working set; allocator caching and OS accounting can change it without a leak. Not a peak measurement.",
+      "fd": "Checkpoint only. Linux /proc/PID/fd; macOS lsof numeric file descriptors excludes Mach ports; Windows null.",
+      "threads": "Checkpoint only. Linux /proc/PID/status; macOS/Windows null (not measured by this driver).",
+      "handles": "Checkpoint only. Windows GetProcessHandleCount; Unix null.",
+      "mach_ports": "Checkpoint event from the native macOS harness: mach_port_name_count counts names in the parent task IPC namespace, not references per name. Null means not collected/unsupported/probe failure; mach_port_probe_error retains the probe error. A stable count is not a no-leak guarantee.",
+      "missing": "Unavailable measurements are null; per-sample errors are recorded when a probe fails.",
+      "overhead": "Monitoring and checkpoint synchronization add scheduling/probe overhead; checkpoint probes occur after the core quiesces."
+    },
+    "cleanup": [],
+    "finished_event_seen": true,
+    "ok": true,
+    "core_elapsed_seconds": 38.91624649100049,
+    "runtime_exit_code": 0,
+    "checkpoints": [
+      {
+        "elapsed_seconds": 1.6633341519991518,
+        "event": "checkpoint",
+        "iteration": 0,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "after_raw_transport",
+        "sampling_ms": 120.34506600321038,
+        "parent": {
+          "rss_bytes": 133861376,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 3.3632763599998725,
+        "event": "checkpoint",
+        "iteration": 0,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "after_performance",
+        "sampling_ms": 118.23022899989155,
+        "parent": {
+          "rss_bytes": 146808832,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 3.713285203997657,
+        "event": "checkpoint",
+        "iteration": 10,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.47387800298748,
+        "parent": {
+          "rss_bytes": 145813504,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 4.058922782998707,
+        "event": "checkpoint",
+        "iteration": 20,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.80709999645478,
+        "parent": {
+          "rss_bytes": 145821696,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 4.407250977998046,
+        "event": "checkpoint",
+        "iteration": 30,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 122.24707100176602,
+        "parent": {
+          "rss_bytes": 145838080,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 4.7630258969984425,
+        "event": "checkpoint",
+        "iteration": 40,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.48187999951188,
+        "parent": {
+          "rss_bytes": 145858560,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 5.10773444699953,
+        "event": "checkpoint",
+        "iteration": 50,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.36396400030935,
+        "parent": {
+          "rss_bytes": 145899520,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 5.448425358998065,
+        "event": "checkpoint",
+        "iteration": 60,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 129.11547000112478,
+        "parent": {
+          "rss_bytes": 145899520,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 5.806332551997912,
+        "event": "checkpoint",
+        "iteration": 70,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 122.08330100111198,
+        "parent": {
+          "rss_bytes": 145928192,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 6.158301515999483,
+        "event": "checkpoint",
+        "iteration": 80,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.11557699891273,
+        "parent": {
+          "rss_bytes": 145928192,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 6.500785953998275,
+        "event": "checkpoint",
+        "iteration": 90,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.0441840008134,
+        "parent": {
+          "rss_bytes": 145936384,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 6.846609737000108,
+        "event": "checkpoint",
+        "iteration": 100,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.37205799788353,
+        "parent": {
+          "rss_bytes": 145944576,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 7.195013038999605,
+        "event": "checkpoint",
+        "iteration": 110,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 121.03135800134623,
+        "parent": {
+          "rss_bytes": 145948672,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 7.541020345997822,
+        "event": "checkpoint",
+        "iteration": 120,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.27292499947362,
+        "parent": {
+          "rss_bytes": 145948672,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 7.887010234997433,
+        "event": "checkpoint",
+        "iteration": 130,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.4861469992029,
+        "parent": {
+          "rss_bytes": 145948672,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 8.232068211000296,
+        "event": "checkpoint",
+        "iteration": 140,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.91752599715255,
+        "parent": {
+          "rss_bytes": 145948672,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 8.578876540999772,
+        "event": "checkpoint",
+        "iteration": 150,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.45592100164504,
+        "parent": {
+          "rss_bytes": 145948672,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 8.928912563998892,
+        "event": "checkpoint",
+        "iteration": 160,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.10370300008799,
+        "parent": {
+          "rss_bytes": 145948672,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 9.274351244999707,
+        "event": "checkpoint",
+        "iteration": 170,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.5994259978761,
+        "parent": {
+          "rss_bytes": 145952768,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 9.623340270998597,
+        "event": "checkpoint",
+        "iteration": 180,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.06266200094251,
+        "parent": {
+          "rss_bytes": 145960960,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 9.969561596997664,
+        "event": "checkpoint",
+        "iteration": 190,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.36547300138045,
+        "parent": {
+          "rss_bytes": 145965056,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 10.313093770997511,
+        "event": "checkpoint",
+        "iteration": 200,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.59809700056212,
+        "parent": {
+          "rss_bytes": 145965056,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 10.657212432997767,
+        "event": "checkpoint",
+        "iteration": 210,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.40701300025103,
+        "parent": {
+          "rss_bytes": 145965056,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 10.998834523998084,
+        "event": "checkpoint",
+        "iteration": 220,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.52539299798082,
+        "parent": {
+          "rss_bytes": 145969152,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 11.340969556000346,
+        "event": "checkpoint",
+        "iteration": 230,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.61193200093112,
+        "parent": {
+          "rss_bytes": 145969152,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 11.69577093800035,
+        "event": "checkpoint",
+        "iteration": 240,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 115.09331100023701,
+        "parent": {
+          "rss_bytes": 145977344,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 12.03610806999859,
+        "event": "checkpoint",
+        "iteration": 250,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 114.73878800097737,
+        "parent": {
+          "rss_bytes": 145985536,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 12.483754842000053,
+        "event": "checkpoint",
+        "iteration": 260,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 125.69107200033613,
+        "parent": {
+          "rss_bytes": 145997824,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 12.83702175399958,
+        "event": "checkpoint",
+        "iteration": 270,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 121.47791399911512,
+        "parent": {
+          "rss_bytes": 145997824,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 13.181658809997316,
+        "event": "checkpoint",
+        "iteration": 280,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.55091500203707,
+        "parent": {
+          "rss_bytes": 145997824,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 13.523701361998974,
+        "event": "checkpoint",
+        "iteration": 290,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.3139679999149,
+        "parent": {
+          "rss_bytes": 146001920,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 13.865497983999376,
+        "event": "checkpoint",
+        "iteration": 300,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 128.94418699943344,
+        "parent": {
+          "rss_bytes": 146001920,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 14.313047392999579,
+        "event": "checkpoint",
+        "iteration": 310,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 127.95407500016154,
+        "parent": {
+          "rss_bytes": 146014208,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 14.669245322998904,
+        "event": "checkpoint",
+        "iteration": 320,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.24840199935716,
+        "parent": {
+          "rss_bytes": 146018304,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 15.015722037998785,
+        "event": "checkpoint",
+        "iteration": 330,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 123.4187110021594,
+        "parent": {
+          "rss_bytes": 146018304,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 15.374985084999935,
+        "event": "checkpoint",
+        "iteration": 340,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 155.76590500131715,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 15.75867265099805,
+        "event": "checkpoint",
+        "iteration": 350,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 122.89889499879791,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 16.10860298499756,
+        "event": "checkpoint",
+        "iteration": 360,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 121.12893700032146,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 16.464545800998167,
+        "event": "checkpoint",
+        "iteration": 370,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 114.98656199910329,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 16.80952421999973,
+        "event": "checkpoint",
+        "iteration": 380,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 123.14899799821433,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 17.15764164799839,
+        "event": "checkpoint",
+        "iteration": 390,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.62403900158824,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 17.503176824000548,
+        "event": "checkpoint",
+        "iteration": 400,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 122.65852500058827,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 17.856963295998867,
+        "event": "checkpoint",
+        "iteration": 410,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.08791300043231,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 18.19885620399873,
+        "event": "checkpoint",
+        "iteration": 420,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.17289399955189,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 18.547107693000726,
+        "event": "checkpoint",
+        "iteration": 430,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.47611299910932,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 18.892469602000347,
+        "event": "checkpoint",
+        "iteration": 440,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.7094529994065,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 19.233088962999318,
+        "event": "checkpoint",
+        "iteration": 450,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 122.59146200085524,
+        "parent": {
+          "rss_bytes": 146022400,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 19.611661087998073,
+        "event": "checkpoint",
+        "iteration": 460,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 175.4141650017118,
+        "parent": {
+          "rss_bytes": 146038784,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 20.027042222998716,
+        "event": "checkpoint",
+        "iteration": 470,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.79508900205838,
+        "parent": {
+          "rss_bytes": 146055168,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 20.375530581997737,
+        "event": "checkpoint",
+        "iteration": 480,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 123.43359500300721,
+        "parent": {
+          "rss_bytes": 146055168,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 20.7320630159993,
+        "event": "checkpoint",
+        "iteration": 490,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 137.26196200150298,
+        "parent": {
+          "rss_bytes": 146059264,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 21.107162898999377,
+        "event": "checkpoint",
+        "iteration": 500,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.92673000006471,
+        "parent": {
+          "rss_bytes": 146063360,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 21.455951812997228,
+        "event": "checkpoint",
+        "iteration": 510,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 123.06533800074249,
+        "parent": {
+          "rss_bytes": 146067456,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 21.807539713998267,
+        "event": "checkpoint",
+        "iteration": 520,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 123.06524199811975,
+        "parent": {
+          "rss_bytes": 146071552,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 22.157729864997236,
+        "event": "checkpoint",
+        "iteration": 530,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.16017899804865,
+        "parent": {
+          "rss_bytes": 146071552,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 22.50628087899895,
+        "event": "checkpoint",
+        "iteration": 540,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.29344500115258,
+        "parent": {
+          "rss_bytes": 146071552,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 22.848609537999437,
+        "event": "checkpoint",
+        "iteration": 550,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.91136600004393,
+        "parent": {
+          "rss_bytes": 146071552,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 23.1923667939991,
+        "event": "checkpoint",
+        "iteration": 560,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.57697100256337,
+        "parent": {
+          "rss_bytes": 146071552,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 23.531894831998216,
+        "event": "checkpoint",
+        "iteration": 570,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 116.78530900098849,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 23.87439103900033,
+        "event": "checkpoint",
+        "iteration": 580,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.22640999930445,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 24.221052401000634,
+        "event": "checkpoint",
+        "iteration": 590,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 123.52491199999349,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 24.566961378997803,
+        "event": "checkpoint",
+        "iteration": 600,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 113.97857000338263,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 24.909144750999985,
+        "event": "checkpoint",
+        "iteration": 610,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.45869400005904,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 25.25506035899889,
+        "event": "checkpoint",
+        "iteration": 620,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 116.35854500127607,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 25.599169532000815,
+        "event": "checkpoint",
+        "iteration": 630,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.82877699867822,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 25.94243030799771,
+        "event": "checkpoint",
+        "iteration": 640,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.07979600093677,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 26.290643504999025,
+        "event": "checkpoint",
+        "iteration": 650,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 121.82964100065874,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 26.640045978998387,
+        "event": "checkpoint",
+        "iteration": 660,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.69950999991852,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 26.986128825999913,
+        "event": "checkpoint",
+        "iteration": 670,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.27861300116638,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 27.325591426997562,
+        "event": "checkpoint",
+        "iteration": 680,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.2348520012747,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 27.665577956999186,
+        "event": "checkpoint",
+        "iteration": 690,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.82754800171824,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 28.007028914998955,
+        "event": "checkpoint",
+        "iteration": 700,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.07964999772958,
+        "parent": {
+          "rss_bytes": 146079744,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 28.35153931899913,
+        "event": "checkpoint",
+        "iteration": 710,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 141.55616900097812,
+        "parent": {
+          "rss_bytes": 146083840,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 28.72559787299906,
+        "event": "checkpoint",
+        "iteration": 720,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 121.13632199907443,
+        "parent": {
+          "rss_bytes": 146083840,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 29.07410588700077,
+        "event": "checkpoint",
+        "iteration": 730,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.08272900088923,
+        "parent": {
+          "rss_bytes": 146083840,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 29.415185800000472,
+        "event": "checkpoint",
+        "iteration": 740,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.02758499854826,
+        "parent": {
+          "rss_bytes": 146083840,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 29.759338566000224,
+        "event": "checkpoint",
+        "iteration": 750,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 116.44937999881222,
+        "parent": {
+          "rss_bytes": 146087936,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 30.101053660000616,
+        "event": "checkpoint",
+        "iteration": 760,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 124.29782899926067,
+        "parent": {
+          "rss_bytes": 146087936,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 30.44856148100007,
+        "event": "checkpoint",
+        "iteration": 770,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 116.92212900015875,
+        "parent": {
+          "rss_bytes": 146087936,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 30.791244666997954,
+        "event": "checkpoint",
+        "iteration": 780,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.73640599858481,
+        "parent": {
+          "rss_bytes": 146092032,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 31.132258334000653,
+        "event": "checkpoint",
+        "iteration": 790,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.37481099771685,
+        "parent": {
+          "rss_bytes": 146096128,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 31.47584909699799,
+        "event": "checkpoint",
+        "iteration": 800,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 118.57686099756393,
+        "parent": {
+          "rss_bytes": 146096128,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 31.818954260997998,
+        "event": "checkpoint",
+        "iteration": 810,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 122.13790099849575,
+        "parent": {
+          "rss_bytes": 146096128,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 32.16563481299818,
+        "event": "checkpoint",
+        "iteration": 820,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 114.78271600208245,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 32.50778911999805,
+        "event": "checkpoint",
+        "iteration": 830,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 122.5399249997281,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 32.85788829000012,
+        "event": "checkpoint",
+        "iteration": 840,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 121.85125900214189,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 33.20085373799884,
+        "event": "checkpoint",
+        "iteration": 850,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.65879700073856,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 33.54907985599857,
+        "event": "checkpoint",
+        "iteration": 860,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.29243900158326,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 33.898880147000455,
+        "event": "checkpoint",
+        "iteration": 870,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.10447299992666,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 34.236788760998024,
+        "event": "checkpoint",
+        "iteration": 880,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 117.18018399915309,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 34.58155468399855,
+        "event": "checkpoint",
+        "iteration": 890,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.50067100042361,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 34.925607031000254,
+        "event": "checkpoint",
+        "iteration": 900,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 116.88482799945632,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 35.26547814500009,
+        "event": "checkpoint",
+        "iteration": 910,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 203.91441399988253,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 35.759789108000405,
+        "event": "checkpoint",
+        "iteration": 920,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.90235299890628,
+        "parent": {
+          "rss_bytes": 146100224,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 36.10404485300023,
+        "event": "checkpoint",
+        "iteration": 930,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 121.55441299910308,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 36.44766214899937,
+        "event": "checkpoint",
+        "iteration": 940,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 124.8766019998584,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 36.80758857500041,
+        "event": "checkpoint",
+        "iteration": 950,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 178.20811499768752,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 37.218596192000405,
+        "event": "checkpoint",
+        "iteration": 960,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.42534300033003,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 37.56553024599998,
+        "event": "checkpoint",
+        "iteration": 970,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.11920500278939,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 37.90851110999938,
+        "event": "checkpoint",
+        "iteration": 980,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.20686699906946,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 38.256138270997326,
+        "event": "checkpoint",
+        "iteration": 990,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 119.19948500144528,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 38.59860133499751,
+        "event": "checkpoint",
+        "iteration": 1000,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "churn",
+        "sampling_ms": 120.12126500121667,
+        "parent": {
+          "rss_bytes": 146104320,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      },
+      {
+        "elapsed_seconds": 38.789247291999345,
+        "event": "checkpoint",
+        "iteration": 1000,
+        "mach_port_name_count": 38,
+        "mach_port_probe_error": null,
+        "stage": "after_crash",
+        "sampling_ms": 115.85319199730293,
+        "parent": {
+          "rss_bytes": 146116608,
+          "fd_count": 4,
+          "thread_count": null,
+          "handle_count": null
+        },
+        "active_workers": 0
+      }
+    ],
+    "rss_sample_count": 38,
+    "worker_exit_counts": {
+      "0": 1002,
+      "17": 1
+    }
+  }
+}

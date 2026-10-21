@@ -10,7 +10,9 @@ use sequenced_task_runner::SequencedTaskRunnerHandle;
 use system::message::{ReadableWithHandlesMessage, SendableMessage};
 use system::message_pipe::MessageEndpoint;
 use system::mojo_types::MojoResult;
-use system::trap::{ArmResult, HandleSignals, Trap, TrapError, TrapEvent, TriggerCondition};
+use system::trap::{
+    HandleSignals, SingleEventArmResult, Trap, TrapError, TrapEvent, TriggerCondition,
+};
 
 // TODO(crbug.com/470438844): Replace some/all of the std::sync imports with
 // chromium sequenced equivalents once those are implemented (figure out which,
@@ -18,6 +20,14 @@ use system::trap::{ArmResult, HandleSignals, Trap, TrapError, TrapEvent, Trigger
 // TODO(crbug.com/477584253): Replace std::sync with std::nonpoison if there are
 // any non-sequenced versions remaining.
 use std::sync::{Arc, Mutex, Weak};
+
+/// A router dispatch selected while reading a message, but run after the
+/// watcher callback lock and temporary endpoint ownership have been released.
+pub(crate) type DeferredMessageJob = Box<dyn FnOnce() + Send + 'static>;
+
+type DeferredMessageHandler = dyn FnMut(ReadableWithHandlesMessage, ResponseSender) -> Option<DeferredMessageJob>
+    + Send
+    + 'static;
 
 /// A message pipe endpoint that can send or receive messages. Whenever it
 /// receives a message, it invokes a user-provided function with the raw bytes
@@ -41,7 +51,7 @@ struct MessagePipeWatcherState {
     // The user-provided callback to run for each message that arrives. This
     // is only ever run on-sequence, so it should be replaced with a sequenced
     // Mutex once we implement those.
-    message_handler: Mutex<Box<dyn MessagePipeWatcherHandler>>,
+    message_handler: Mutex<Box<DeferredMessageHandler>>,
     // The user-provided disconnect handler. This can be read/written
     // off-sequence, so it must be wrapped in a real Mutex, not a sequenced equivalent.
     disconnect_info: Mutex<DisconnectInfo>,
@@ -156,7 +166,35 @@ impl MessagePipeWatcher {
     pub fn new_with_runner(
         endpoint: MessageEndpoint,
         runner: SequencedTaskRunnerHandle,
-        message_handler: impl MessagePipeWatcherHandler,
+        mut message_handler: impl MessagePipeWatcherHandler,
+        disconnect_handler: Option<Box<dyn FnOnce() + Send + 'static>>,
+        begin_processing_immediately: bool,
+    ) -> Option<Self> {
+        Self::new_with_deferred_handler(
+            endpoint,
+            runner,
+            move |message, sender| {
+                message_handler(message, sender);
+                None
+            },
+            disconnect_handler,
+            begin_processing_immediately,
+        )
+    }
+
+    /// Internal router constructor. A returned job runs on this same posted
+    /// watcher task, after releasing the callback guard and temporary strong
+    /// state reference. The public constructors keep their original callback
+    /// lifetime and rearm behavior by always returning `None`.
+    pub(crate) fn new_with_deferred_handler(
+        endpoint: MessageEndpoint,
+        runner: SequencedTaskRunnerHandle,
+        message_handler: impl FnMut(
+            ReadableWithHandlesMessage,
+            ResponseSender,
+        ) -> Option<DeferredMessageJob>
+        + Send
+        + 'static,
         disconnect_handler: Option<Box<dyn FnOnce() + Send + 'static>>,
         begin_processing_immediately: bool,
     ) -> Option<Self> {
@@ -316,7 +354,7 @@ impl MessagePipeWatcher {
         };
 
         // Read the message from the pipe and pass it to the user's callback.
-        {
+        let deferred_job = {
             let msg = watcher_state
                 .endpoint
                 .read()
@@ -329,21 +367,35 @@ impl MessagePipeWatcher {
                 .try_lock()
                 // This function is run on-sequence, so try_lock should always succeed
                 .expect("Sequence-bound mutex was locked or poisoned");
-            message_handler(msg, response_sender);
-        }
+            message_handler(msg, response_sender)
+        };
 
-        Self::try_arm(&watcher_state);
+        if let Some(job) = deferred_job {
+            let state_weak = Arc::downgrade(&watcher_state);
+            // The selected handler must not inherit this read task's strong
+            // ownership of the endpoint. In particular, dropping the primary
+            // receiver/remote inside the handler must be able to close it.
+            drop(watcher_state);
+            job();
+            if let Some(state) = state_weak.upgrade() {
+                Self::try_arm(&state);
+            }
+        } else {
+            // Preserve the public raw watcher's existing ownership and rearm
+            // behavior, including while its callback is running.
+            Self::try_arm(&watcher_state);
+        }
     }
 
     /// Try to rearm the trap. If there are blocking events, instead post a task
     /// to handle the first one of them (which will recursively post tasks to
     /// handle the remainder over time).
     fn try_arm(watcher_state: &Arc<MessagePipeWatcherState>) {
-        if let ArmResult::BlockingEvents(vec) = watcher_state.trap.arm() {
+        if let SingleEventArmResult::BlockingEvent(event) = watcher_state.trap.arm_single_event() {
             // This will post a task that will recursively call
             // `handle_message_on_sequence`
             Self::process_trap_event(
-                &vec[0],
+                &event,
                 &Arc::downgrade(watcher_state),
                 &watcher_state.runner,
             );

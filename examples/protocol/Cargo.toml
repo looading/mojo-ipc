@@ -6,7 +6,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-ipc = { package = "mojo-ipc", path = "../../crates/mojo-ipc" }
+ipc = { package = "mojo-ipc", path = "../../crates/mojo-ipc", version = "=0.2.0" }
 
 [build-dependencies]
-mojom-build = { path = "../../crates/mojom-build" }
+mojom-build = { path = "../../crates/mojom-build", version = "=0.2.0" }

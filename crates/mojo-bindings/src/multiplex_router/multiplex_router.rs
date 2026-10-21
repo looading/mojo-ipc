@@ -28,8 +28,12 @@
 //! the future if we need to add a way of unbinding the router (C++ allows this
 //! but it's a smell, so we hope to not support it in Rust). The registry and
 //! task queue are both stored behind a full `Arc<Mutex<>>` and so can be
-//! accessed from any thread. To reduce lock contention, this class never runs
-//! handlers directly; it only ever schedules them.
+//! accessed from any thread. Associated endpoints always use posted dispatch.
+//! A never-associated primary endpoint can return an owned dispatch job to the
+//! watcher, which runs it on the existing posted task after releasing all
+//! router/watcher callback guards. This preserves pipe FIFO and asynchronous
+//! delivery, but does not promise a second task turn relative to unrelated
+//! tasks already queued on the same runner.
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, Weak};
@@ -42,7 +46,7 @@ use super::control_messages::{
 };
 
 use crate::message::MojomMessage;
-use crate::message_pipe_watcher::{MessagePipeWatcher, ResponseSender};
+use crate::message_pipe_watcher::{DeferredMessageJob, MessagePipeWatcher, ResponseSender};
 
 pub(crate) use super::endpoint_registry::*;
 
@@ -92,6 +96,12 @@ pub(super) struct MultiplexRouterSharedState {
     /// schedule the disconnect handler for any new endpoints as soon as they're
     /// bound.
     pipe_closed: bool,
+    /// True only from creation until the first associated/state transition or
+    /// posted-dispatch fallback. It must never be re-enabled: otherwise a new
+    /// direct job could overtake an older already-posted primary handler.
+    primary_dispatch_eligible: bool,
+    #[cfg(test)]
+    queued_task_observer: Option<std::sync::mpsc::Sender<usize>>,
 }
 
 impl MultiplexRouter {
@@ -116,6 +126,9 @@ impl MultiplexRouter {
             registry: EndpointRegistry::new(sets_high_bit, endpoint_map),
             unscheduled_tasks: VecDeque::new(),
             pipe_closed: false,
+            primary_dispatch_eligible: true,
+            #[cfg(test)]
+            queued_task_observer: None,
         }));
         let shared_state_clone = Arc::clone(&shared_state);
 
@@ -131,7 +144,7 @@ impl MultiplexRouter {
                     shared_state: shared_state_clone,
                 };
                 let router_weak_clone = router_weak.clone();
-                MessagePipeWatcher::new_with_runner(
+                MessagePipeWatcher::new_with_deferred_handler(
                     endpoint,
                     runner,
                     move |msg, sender| router_weak.incoming_message_handler(msg, sender),
@@ -163,6 +176,9 @@ impl MultiplexRouter {
                 registry: EndpointRegistry::new(sets_high_bit, HashMap::new()),
                 unscheduled_tasks: VecDeque::new(),
                 pipe_closed: false,
+                primary_dispatch_eligible: false,
+                #[cfg(test)]
+                queued_task_observer: None,
             })),
         }
     }
@@ -200,6 +216,7 @@ impl MultiplexRouter {
         let interface_id;
         {
             let mut shared_state = self.shared_state.lock().unwrap();
+            shared_state.primary_dispatch_eligible = false;
             interface_id = match interface_id_opt {
                 // We should only ever get IDs allocated by the peer.
                 Some(id) if !shared_state.registry.is_peer_allocated_id(id) => return None,
@@ -252,6 +269,7 @@ impl MultiplexRouter {
     pub(crate) fn bind_interface(&self, interface_id: InterfaceId, endpoint_info: EndpointInfo) {
         {
             let mut shared_state = self.shared_state.lock().unwrap();
+            shared_state.primary_dispatch_eligible = false;
             // TODO(crbug.com/524990003): It's sometimes valid for the interface
             // ID to not yet be in the map; figure out the specific conditions
             // and document/check for them.
@@ -310,13 +328,11 @@ impl MultiplexRouter {
     /// will handle the notification to the interfaces on the other side.
     pub(crate) fn notify_dropped(&self, interface_id: InterfaceId) {
         // If the interface was already removed, no need to do anything
-        let previous = self
-            .shared_state
-            .lock()
-            .unwrap()
-            .registry
-            .endpoint_map
-            .remove(&interface_id);
+        let previous = {
+            let mut shared_state = self.shared_state.lock().unwrap();
+            shared_state.primary_dispatch_eligible = false;
+            shared_state.registry.endpoint_map.remove(&interface_id)
+        };
         if previous.is_none() {
             return;
         }
@@ -352,6 +368,7 @@ impl MultiplexRouter {
     /// to notify us instead.
     pub(crate) fn notify_peer_closed(&self, interface_id: InterfaceId) {
         let mut shared_state = self.shared_state.lock().unwrap();
+        shared_state.primary_dispatch_eligible = false;
         if shared_state
             .registry
             .endpoint_map
@@ -398,16 +415,19 @@ impl MultiplexRouter {
         &self,
         raw_message: system::message::ReadableWithHandlesMessage,
         _sender: ResponseSender,
-    ) {
+    ) -> Option<DeferredMessageJob> {
         let Some(message) = MojomMessage::parse_raw_or_report_bad_message(raw_message) else {
             // If conversion failed then the header must have been malformed.
             // The bad message has already been reported, so nothing else to do.
-            return;
+            return None;
         };
 
         let task = if message.header.interface_id != CONTROL_INTERFACE_ID {
             Task::Message(message)
         } else {
+            // Control traffic permanently leaves the simple primary-only
+            // path, even if the particular control message is later ignored.
+            self.shared_state.lock().unwrap().primary_dispatch_eligible = false;
             // If this is a control message, then we need to read it and create
             // the appropriate task, which at the moment will only ever be a
             // disconnect notification.
@@ -420,19 +440,59 @@ impl MultiplexRouter {
             } else {
                 // Ignore other types of control message for now, and bad
                 // messages which have already been reported.
-                return;
+                return None;
             }
         };
 
-        // Add this task to the queue to be scheduled later. If the queue is
-        // empty, this will just schedule it immediately.
-        self.shared_state
-            .lock()
-            .unwrap()
-            .unscheduled_tasks
-            .push_back(task);
+        {
+            let mut shared_state = self.shared_state.lock().unwrap();
+            let dispatch_handler = match &task {
+                Task::Message(message)
+                    if shared_state.primary_dispatch_eligible
+                        && message.header.interface_id == PRIMARY_INTERFACE_ID
+                        && !shared_state.pipe_closed
+                        && shared_state.unscheduled_tasks.is_empty()
+                        && shared_state.registry.endpoint_map.len() == 1 =>
+                {
+                    shared_state
+                        .registry
+                        .endpoint_map
+                        .get(&PRIMARY_INTERFACE_ID)
+                        .and_then(Option::as_ref)
+                        .filter(|info| info.runner.runs_tasks_in_current_sequence())
+                        .map(|info| info.incoming_message_handler.clone())
+                }
+                _ => None,
+            };
+
+            if let Some(handler) = dispatch_handler {
+                let Task::Message(message) = task else {
+                    unreachable!("Only a primary message can select direct dispatch")
+                };
+                // Selecting this owned message/handler commits its FIFO
+                // position while the registry is locked. A concurrent close
+                // may schedule a later disconnect, but must not make this
+                // already-selected message silently disappear. The watcher
+                // releases its own guard/state before invoking the job.
+                drop(shared_state);
+                let response_sender =
+                    super::ResponseSender::rust(self.clone_and_downgrade(), PRIMARY_INTERFACE_ID);
+                return Some(Box::new(move || (*handler)(message, response_sender)));
+            }
+
+            // A posted handler must never coexist with later fast eligibility.
+            // This also covers unexpected sequence or registry states, not
+            // just associated endpoints.
+            shared_state.primary_dispatch_eligible = false;
+            shared_state.unscheduled_tasks.push_back(task);
+            #[cfg(test)]
+            if let Some(observer) = &shared_state.queued_task_observer {
+                let _ = observer.send(shared_state.unscheduled_tasks.len());
+            }
+        }
 
         self.schedule_all_possible_tasks();
+        None
     }
 
     /// Schedule each queued task on its runner, until we find a task that can't
@@ -443,6 +503,9 @@ impl MultiplexRouter {
     /// stop whenever we hit one that we can't handle yet.
     fn schedule_all_possible_tasks(&self) {
         let mut shared_state_guard = self.shared_state.lock().unwrap();
+        // Defensive invariant for every current/future caller: once anything
+        // can use the posted path, later primary messages cannot bypass it.
+        shared_state_guard.primary_dispatch_eligible = false;
         let shared_state = &mut *shared_state_guard;
         let registry = &mut shared_state.registry;
         let unscheduled_tasks = &mut shared_state.unscheduled_tasks;
@@ -530,6 +593,7 @@ impl MultiplexRouter {
     fn run_all_disconnect_handlers(&self) {
         {
             let mut shared_state_guard = self.shared_state.lock().unwrap();
+            shared_state_guard.primary_dispatch_eligible = false;
             let shared_state = &mut *shared_state_guard;
             let registry = &mut shared_state.registry;
             let unscheduled_tasks = &mut shared_state.unscheduled_tasks;
@@ -565,5 +629,23 @@ impl MultiplexRouter {
     /// registry information, ignoring their reference to the watcher.
     pub(super) fn same_registry(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.shared_state, &other.shared_state)
+    }
+
+    #[cfg(test)]
+    pub(super) fn queued_task_count_for_testing(&self) -> usize {
+        self.shared_state.lock().unwrap().unscheduled_tasks.len()
+    }
+
+    #[cfg(test)]
+    pub(super) fn set_queued_task_observer_for_testing(
+        &self,
+        observer: std::sync::mpsc::Sender<usize>,
+    ) {
+        self.shared_state.lock().unwrap().queued_task_observer = Some(observer);
+    }
+
+    #[cfg(test)]
+    pub(super) fn primary_dispatch_eligible_for_testing(&self) -> bool {
+        self.shared_state.lock().unwrap().primary_dispatch_eligible
     }
 }

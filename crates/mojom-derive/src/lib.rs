@@ -175,6 +175,7 @@ fn derive_mojomparse_struct(
         .collect();
 
     let context_type = syn::Ident::new("__MojomContext", proc_macro2::Span::mixed_site());
+    let field_names: Vec<String> = field_idents.iter().map(|name| name.to_string()).collect();
 
     // A bunch of entries for a MojomType::Struct
     let mojom_type_fields: Vec<proc_macro2::TokenStream> = struct_fields
@@ -182,8 +183,7 @@ fn derive_mojomparse_struct(
         .map(|field| {
             let ty = &field.ty;
             let wire_ty = field_wire_type(&field.attrs, ty);
-            let name = field.ident.as_ref().unwrap().to_string();
-            quote! { (#name.to_string(), <#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::mojom_type()) }
+            quote! { <#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::mojom_type() }
         })
         .collect();
 
@@ -207,9 +207,20 @@ fn derive_mojomparse_struct(
             let ty = &field.ty;
             let wire_ty = field_wire_type(&field.attrs, ty);
             let name = &field.ident;
-            let name_str = field.ident.as_ref().unwrap().to_string();
             quote! {
-                (#name_str.to_string(), <#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::into_mojom_value(#value_ident.#name, #context_ident))
+                <#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::into_mojom_value(#value_ident.#name, #context_ident)
+            }
+        })
+        .collect();
+
+    let to_wire_value_fields: Vec<proc_macro2::TokenStream> = struct_fields
+        .iter()
+        .map(|field| {
+            let ty = &field.ty;
+            let wire_ty = field_wire_type(&field.attrs, ty);
+            let name = &field.ident;
+            quote! {
+                <#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::into_mojom_value_for_wire(#value_ident.#name, #context_ident)
             }
         })
         .collect();
@@ -236,20 +247,37 @@ fn derive_mojomparse_struct(
 
             impl<#context_type: __MojomRegistrar> __mojom_core::MojomParse<Self, #context_type> for #name {
                 fn mojom_type() -> __mojom_core::MojomType {
-                    let (field_names, fields) : (Vec<String>, Vec<__mojom_core::MojomType>) = vec![
-                        #(#mojom_type_fields),*
-                    ]
-                    .into_iter().unzip();
-                    __mojom_core::MojomType::Struct { field_names, fields }
+                    __mojom_core::MojomType::Struct {
+                        field_names: vec![#(#field_names.to_string()),*],
+                        fields: vec![#(#mojom_type_fields),*],
+                    }
+                }
+
+                fn wire_type() -> &'static __mojom_core::MojomWireType {
+                    // Derived structs have a concrete Self type. A per-type
+                    // cell avoids the global fallback's lock and hash lookup
+                    // on every message. As with the trait fallback, Context
+                    // must not change a type's wire schema.
+                    static WIRE_TYPE: ::std::sync::OnceLock<__mojom_core::MojomWireType> = ::std::sync::OnceLock::new();
+                    WIRE_TYPE.get_or_init(|| __mojom_core::pack_mojom_type(
+                        &<Self as __mojom_core::MojomParse<Self, #context_type>>::mojom_type()
+                    ))
                 }
 
                 fn into_mojom_value(self, #context_ident: &#context_type) -> __mojom_core::MojomValue {
                     let #value_ident = self;
-                    let (field_names, fields) : (Vec<String>, Vec<__mojom_core::MojomValue>) = vec![
-                        #(#to_mojom_value_fields),*
-                    ]
-                    .into_iter().unzip();
-                    __mojom_core::MojomValue::Struct ( field_names, fields )
+                    __mojom_core::MojomValue::Struct (
+                        vec![#(#field_names.to_string()),*],
+                        vec![#(#to_mojom_value_fields),*],
+                    )
+                }
+
+                fn into_mojom_value_for_wire(self, #context_ident: &#context_type) -> __mojom_core::MojomValue {
+                    let #value_ident = self;
+                    __mojom_core::MojomValue::Struct (
+                        Vec::new(),
+                        vec![#(#to_wire_value_fields),*],
+                    )
                 }
 
                 fn try_from_mojom_value(#value_ident: __mojom_core::MojomValue, #context_ident: &#context_type) -> __mojom_anyhow::Result<Self> {
@@ -321,6 +349,9 @@ fn derive_mojomparse_union(
     let to_mojom_value_branches = variant_info
         .iter()
         .map(|(variant_name, ty, wire_ty, discriminant)| quote! { #name::#variant_name(v) => (#discriminant, <#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::into_mojom_value(v, #context_ident)) });
+    let to_wire_value_branches = variant_info
+        .iter()
+        .map(|(variant_name, ty, wire_ty, discriminant)| quote! { #name::#variant_name(v) => (#discriminant, <#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::into_mojom_value_for_wire(v, #context_ident)) });
     let from_mojom_value_branches = variant_info.iter().map(|(name, ty, wire_ty, discriminant)| {
         // boxed_value is defined by the surrounding scope
         quote! { #discriminant => Ok(Self::#name(<#ty as __mojom_core::MojomParse<#wire_ty, #context_type>>::try_from_mojom_value(*boxed_value, #context_ident)?)), }
@@ -341,6 +372,13 @@ fn derive_mojomparse_union(
                 fn into_mojom_value(self, #context_ident: &#context_type) -> __mojom_core::MojomValue {
                     let (discriminant, mojom_value) = match self {
                         #(#to_mojom_value_branches),*
+                    };
+                    __mojom_core::MojomValue::Union ( discriminant, Box::new(mojom_value) )
+                }
+
+                fn into_mojom_value_for_wire(self, #context_ident: &#context_type) -> __mojom_core::MojomValue {
+                    let (discriminant, mojom_value) = match self {
+                        #(#to_wire_value_branches),*
                     };
                     __mojom_core::MojomValue::Union ( discriminant, Box::new(mojom_value) )
                 }

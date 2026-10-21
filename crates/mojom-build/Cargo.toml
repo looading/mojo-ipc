@@ -3,8 +3,12 @@ name = "mojom-build"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Cargo integration for the pinned official Chromium Mojom Rust generator"
-include = ["src/**", "vendor/**", "Cargo.toml", "README.md"]
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Cargo integration for the pinned Chromium Mojom Rust generator"
+readme = "README.md"
+include = ["src/**", "vendor/**", "Cargo.toml", "README.md", "LICENSE"]
 
 [dependencies]
 serde_json = "1"
