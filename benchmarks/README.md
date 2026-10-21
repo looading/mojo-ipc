@@ -1,5 +1,9 @@
 # IPC 性能与稳定性测试
 
+`0.2.1` 的 56 次逐 case ABBA/BAAB 对照、全部不利项与复现口径见
+[P99_BAAB_OPTIMIZATION.md](P99_BAAB_OPTIMIZATION.md)。64 KiB typed 两组 p99
+方向改善，但其他大小仍有回退；各轮历史结果单独保留。
+
 这里测试完整 Rust SDK 的双进程、类型化 Mojom IPC：Rust 调用端、生成的协议代码、
 序列化、官方 Mojo Core、跨进程传输、接收端调度以及响应回调都在测量路径中。
 结果代表这套 SDK 和测试程序的端到端表现，不能直接当作裸 Mojo Core 的性能。

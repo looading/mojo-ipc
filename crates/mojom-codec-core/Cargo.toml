@@ -13,7 +13,7 @@ readme = "README.md"
 chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
 
 [dependencies]
-system = { package = "mojo-system", path = "../mojo-system", version = "=0.2.0" }
+system = { package = "mojo-system", path = "../mojo-system", version = "=0.2.1" }
 anyhow = "1"
 itertools = "0.14"
 ordered_float = { package = "ordered-float", version = "5" }

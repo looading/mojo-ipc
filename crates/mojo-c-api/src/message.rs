@@ -326,8 +326,15 @@ pub fn MojoGetMessageData<'a>(
             num_handles_written,
         } => {
             GetMessageDataStatus::Success {
-                // SAFETY: `MojoGetMessageDataInternal` promises this call is safe
-                bytes: unsafe { std::slice::from_raw_parts(buffer, buffer_size) },
+                bytes: if buffer_size == 0 {
+                    // Core may return null for a valid empty payload. Rust
+                    // slices require a non-null pointer even at length zero.
+                    &[]
+                } else {
+                    // SAFETY: the internal function guarantees a valid,
+                    // non-null buffer for this nonempty message payload.
+                    unsafe { std::slice::from_raw_parts(buffer, buffer_size) }
+                },
                 num_handles_written,
             }
         }
@@ -355,9 +362,15 @@ pub fn MojoGetMessageDataMut<'a>(
             num_handles_written,
         } => {
             GetMessageDataStatus::Success {
-                // SAFETY: `MojoGetMessageDataInternal` promises this call is safe,
-                // and we have a mutable reference to `message`.
-                bytes: unsafe { std::slice::from_raw_parts_mut(buffer, buffer_size) },
+                bytes: if buffer_size == 0 {
+                    // As above, do not construct a Rust slice from a possibly
+                    // null native pointer, even when its length is zero.
+                    &mut []
+                } else {
+                    // SAFETY: the internal function guarantees a valid,
+                    // non-null buffer, and we exclusively borrow `message`.
+                    unsafe { std::slice::from_raw_parts_mut(buffer, buffer_size) }
+                },
                 num_handles_written,
             }
         }
@@ -377,10 +390,11 @@ pub fn MojoGetMessageDataMut<'a>(
 ///
 /// Safety considerations:
 ///
-/// If this function returns `Success`, then it is safe to call
-/// `slice::from_raw_parts` on the contained pointer + size. If the caller has
-/// a mutable reference to `message`, then it is also safe to call
-/// `slice::from_raw_parts_mut`.
+/// If this function returns `Success` with a nonzero size, then it is safe to
+/// call `slice::from_raw_parts` on the contained pointer + size. If the caller
+/// has a mutable reference to `message`, then it is also safe to call
+/// `slice::from_raw_parts_mut`. A zero-size native buffer may be null and must
+/// instead be represented by an ordinary empty Rust slice.
 ///
 /// In both cases, the lifetime of the slice is the same as that of `message`.
 fn MojoGetMessageDataInternal(
@@ -424,15 +438,19 @@ fn MojoGetMessageDataInternal(
 
     match result {
         Ok(()) => {
-            debug_assert!(!buffer.is_null());
             // Will not panic if usize has at least 32 bits, which is true for
             // Chromium targets
             let buffer_size: usize = num_bytes.try_into().unwrap();
+            assert!(
+                buffer_size == 0 || !buffer.is_null(),
+                "native runtime returned a null nonempty message buffer"
+            );
             // SAFETY: We must show that it is valid to call
             // `std::slice::from_raw_parts` on the `bytes` field of
             // the return value. `buffer` and `buffer_size`
             // were obtained by calling `MojoGetMessageData`, so we trust that
-            // they are valid, aligned, readable, etc.
+            // they are valid, aligned, readable, etc. Only a nonempty buffer
+            // is converted from raw parts; an empty one may legally be null.
             // The buffer is readable as long as the message is alive, and the
             // type of this function ensures that the lifetime of
             // the resulting reference is the same as that of
@@ -528,6 +546,36 @@ mod parts_tests {
         match MojoGetMessageData(&empty, None) {
             GetMessageDataStatus::Success { bytes, .. } => assert!(bytes.is_empty()),
             _ => panic!("empty parts message was not committed"),
+        }
+
+        // A received empty parcel may have a null native buffer, unlike a
+        // freshly reserved message. Both safe slice wrappers must accept it,
+        // including when handles remain owned by that zero-byte message.
+        for count in [0, 4] {
+            let (attached, peers): (Vec<_>, Vec<_>) =
+                (0..count).map(|_| MojoCreateMessagePipe().unwrap()).unzip();
+            let (sender, receiver) = MojoCreateMessagePipe().unwrap();
+            let empty = MojoCreateMessageWithDataParts(&[&[]], attached).unwrap();
+            MojoWriteMessage(&sender, empty).unwrap();
+            let mut received = read_local(&receiver).unwrap();
+            match MojoGetMessageData(&received, None) {
+                GetMessageDataStatus::Success { bytes, .. } => assert!(bytes.is_empty()),
+                _ => panic!("received empty payload could not be borrowed"),
+            }
+            match MojoGetMessageDataMut(&mut received, None) {
+                GetMessageDataStatus::Success { bytes, .. } => {
+                    assert!(bytes.is_empty());
+                    bytes.fill(0);
+                }
+                _ => panic!("received empty payload could not be mutably borrowed"),
+            }
+            drop(received);
+            for peer in peers {
+                assert!(matches!(
+                    read_local(&peer),
+                    Err(MojoError::FailedPrecondition)
+                ));
+            }
         }
 
         let payload: Vec<u8> = (0..1_048_576).map(|i| (i % 256) as u8).collect();

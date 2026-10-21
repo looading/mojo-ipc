@@ -46,6 +46,7 @@ mod native_dispatch_tests;
 pub(crate) use endpoint_registry::{
     EndpointInfo, INVALID_INTERFACE_ID, InterfaceId, PRIMARY_INTERFACE_ID,
 };
+pub(crate) use multiplex_router::DeferredMessageJob;
 pub(crate) use multiplex_router_handle::MultiplexRouterHandle;
 pub(crate) use router_handle::{AssociatedRouterHandle, RouterHandle};
 

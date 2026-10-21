@@ -12,7 +12,56 @@ Windows x64 已完成从 macOS 的官方 Core DLL 交叉编译、最终链接与
 Rust 目标也已由 cargo-xwin 完整编译和链接；Windows 运行验收仍待执行。
 Linux、macOS arm64 当前通过 Rust 编译检查，原生构建和运行仍待验收。
 当前工程是可继续集成的开发版，尚不能作为已经完成三平台验收的发行版。
-Cargo SDK 的 `0.1.0` 已发布到 crates.io，原生库仍由使用者单独提供。
+Cargo SDK 通过 crates.io 分发，原生库仍由使用者单独提供。
+
+## 0.2.1：接收路径、空消息与逐 case p99 对照
+
+接收路径复用成功的 `GetMessageData` 返回的 bytes：零 handles 从两次查询降为一次，
+有 handles 从三次降为两次。公开 owned payload 仍复制为 `Vec<u8>`，没有移除
+Core 私有消息副本或缓存原生指针。primary-only deferred job 改用具体 owned 类型，
+省去临时 Box；选择 job、释放锁、执行回调、弱引用升级及 rearm 的次序不变。
+
+新增真实 native 测试最初发现既有 C API 包装层不接受合法的 `(null, 0)` buffer。
+初轮 ordinary 106 项通过，native 新测试为 5 pass / 1 fail；失败日志保留在
+`work/p99-baab-20261021/native-fused-read.log`（本机任务目录）。修复后，零长度
+buffer 直接返回安全空 slice，非零长度检查 non-null，shared/mut 两种访问均覆盖。
+r2 重新冻结、使用独立 target 构建；初轮未进行性能测量，没有替换失败性能数据。
+
+| r2 验收 | 实际结果 |
+| --- | --- |
+| `cargo test --workspace --locked` | 106 passed；12 ignored 原生 opt-in 项不计入普通通过数 |
+| 新 fused-read 原生测试 | 6 passed，覆盖 0/1/7/8/9/64/64KiB/1MiB、多个真实 handles、Err/unwind 与 owner 存活 |
+| 路由原生测试 | 4 passed，覆盖 FIFO/断连、重入、associated backlog、最后 watcher owner 释放 |
+| Trap / message parts 原生测试 | 1 + 1 passed；parts 包含空消息的 shared/mut 与 handles 释放 |
+| Mojom 生成器 | 6 passed |
+| Windows x64 / Linux x64 / macOS arm64 | 完整 workspace/all-targets `cargo check` 均 exit 0；不代表新链接或原生运行验收 |
+| 0.2.0-source ↔ 0.2.1-source 双进程 | 8 个逐字段/逐 byte Record cases、2 次真实 Observer endpoint transfer 及后续通知通过，pending 0，两个 child wait 0 |
+
+双向测试使用同一 consumer、schema 和 native；before 只将 Cargo 元数据归一到 0.2.1，
+生产源码保持 `0b0e29b`，after 为新实现。codec/generator/schema/header/native 等
+115 个文件与基线逐字节一致，原生 ABI v1 和 native image SHA 保持不变。
+本轮原生执行仅为 macOS x86_64，三平台 CI 配置保留。
+
+正式数据为 `target/validation/p99-baab-v021-r2-cases/`：7 个 case 各自执行
+ABBA + BAAB，共 56 次；每个 IPC trial 至少 5 秒、codec trial 至少 2 秒。
+共同 15 文件 harness、两份独立 target、同 Rust 1.96/native，初始固定 20 秒及
+每 trial 前固定 5 秒静默，不依 CPU 阈值或结果调整。周期 RSS 采样关闭。
+每个 block 每侧仅两次 run，综合值为每侧四个 run 指标的中位数，不池化请求样本。
+
+64 KiB typed p99 的综合中位数为 446.1605 → 436.273 µs（−2.22%），
+ABBA 为 432.085 → 427.7315 µs（−1.01%），BAAB 为 492.2185 → 450.8275 µs（−8.41%）。
+但 0 B / 64 B / 1 MiB typed 综合 p99 分别回退 4.73% / 21.57% / 5.22%，
+其 BAAB 分别回退 9.44% / 9.11% / 21.34%。raw 64KiB 综合 p99 也回退 7.43%。
+共 25 唯一主指标 × 3 个重叠 scope，40 条不利 scope 为综合 13、ABBA 17、BAAB 10，
+涉及 21 个唯一指标；均保留。112 个 CPU limit 端点均为 100，不证明持续频率稳定、
+没有噪声或确定因果。本轮数据不替代下方 0.2.0 正式八轮及补测，不能据此认定所有 p99 已解决。
+详见 [完整对照](benchmarks/P99_BAAB_OPTIMIZATION.md) 与
+[全部指标](benchmarks/baselines/macos-x64-p99-baab-20261021.json)。
+
+独立 after 稳定性序列位于 `target/validation/p99-baab-v021-r2-stability-after/`：
+30.00134561 秒完成 1,444,961 次请求，sent = completed、pending 0；100 次 churn，
+104 个 worker 全部回收，另检查 64 个 pending 请求的异常断连释放。
+这是一轮有限运行；资源检查点不构成无泄漏证明，其 RTT 不合并到上述性能序列。
 
 ## 0.2.0 primary dispatch：实现与已验收边界
 

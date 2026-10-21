@@ -10,8 +10,16 @@
 Windows x64 已在 macOS 上完成官方 Core DLL 交叉编译，以及 cargo-xwin 的 Rust
 完整编译和链接；Windows 运行验收仍待执行。Linux、macOS arm64 已通过 Rust 编译检查，
 原生构建和运行仍待验收。
-当前源码的 Cargo 包版本为 `0.2.0`。原生运行库需单独构建和提供，
+当前源码的 Cargo 包版本为 `0.2.1`。原生运行库需单独构建和提供，
 尚未发布通用预编译包。
+
+`0.2.1` 保留 `0.2.0` 的 Rust API、Mojom wire 格式、Chromium pin 和原生 ABI。
+接收时复用提取 handles 的原生查询结果，省去重复的 `GetMessageData`；
+primary 快捷派发用具体 owned job 省去临时 `Box`，既有 FIFO、锁释放及 fallback 条件保持。
+同时修复合法空 payload 的原生空指针处理，覆盖零/多个 handles 和共享/可变读取。
+本轮 56 次对照中，64 KiB typed p99 的 ABBA / BAAB 中位数分别下降 1.01% / 8.41%，
+但 0 B、64 B、1 MiB 仍有 p99 回退，不能视为已全面解决尾延迟。
+完整结果与全部不利项见 [逐 case 对照](benchmarks/P99_BAAB_OPTIMIZATION.md)。
 
 `0.2.0` 新增紧凑数组的公开 AST 变体，低层 `MojomValue` 的穷尽匹配和相等、哈希、
 排序处理需适配，不能视为 `0.1.0` 的 Rust 源码兼容更新。codec、derive、生成器和运行时
@@ -19,7 +27,7 @@ Windows x64 已在 macOS 上完成官方 Core DLL 交叉编译，以及 cargo-xw
 保留。Mojom wire 格式、上游 Chromium pin 和原生 C ABI v1 保持不变，历史 `0.1.0`
 registry 对照用于验证 wire 兼容。
 
-本轮还加入栈上消息头编码和单事件 trap arm 路径，保留公开 owned-message 和 `arm()`
+`0.2.0` 还加入栈上消息头编码和单事件 trap arm 路径，保留公开 owned-message 和 `arm()`
 接口。它们的性能与尾延迟效果须以冻结产物的独立对照结果为准。
 
 合格的 primary-only 接口现在可在已经异步投递的 watcher task 末尾处理消息，省去
@@ -90,7 +98,7 @@ python3 benchmarks/run.py --stress-seconds 60 \
 结果包含真实完成数、RTT 分位数、应用 payload 吞吐、资源采样和运行环境。
 统计口径、各平台资源采集限制和长时运行参数见 `benchmarks/README.md`。
 
-本轮 macOS x86_64 正式八轮中，64 KiB typed RTT 的 run p50 中位数为
+`0.2.0` primary-dispatch 轮的 macOS x86_64 正式八轮中，64 KiB typed RTT 的 run p50 中位数为
 275.6115 → 246.0965 µs，run p99 中位数为 481.6085 → 408.1355 µs。
 但 p99 在 ABBA 组下降 28.49%，在 BAAB 组上升 25.79%；最后一轮 after 和
 全部下降项均保留。每轮前后记录的 CPU_Speed_Limit 也发生变化，端点观测不足以
@@ -127,10 +135,10 @@ Windows 运行验收继续保留在现有原生 CI 中，尚未执行。
 
 ```toml
 [dependencies]
-ipc = { package = "mojo-ipc", version = "0.2.0" }
+ipc = { package = "mojo-ipc", version = "=0.2.1" }
 
 [build-dependencies]
-mojom-build = "0.2.0"
+mojom-build = "=0.2.1"
 ```
 
 在仓库中开发时，也可以使用对应 `crates/` 目录的 `path` 依赖。
@@ -234,7 +242,7 @@ Linux 使用 `.so`，Windows 使用 `mojo_rs_native.dll`；PowerShell 可用
 
 实际已执行的检查与未执行项见 `VALIDATION.md`。
 
-## 本轮尾延迟对照摘要
+## 0.2.0 尾延迟对照摘要（历史记录）
 
 以下为 macOS x86_64 的独立 run 统计量中位数变化，After 相对 Before；延迟负值
 表示更低，吞吐正值表示更高。正式八轮、各 block 与补充 BAAB 分别计算，不池化。

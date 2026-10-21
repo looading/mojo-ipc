@@ -10,7 +10,22 @@ buffers, and process bootstrap helpers. This is an early SDK for communication
 between your own Rust processes. Protocol version negotiation and interoperability
 with arbitrary Chromium versions are not supported.
 
-## Upgrading to 0.2.0
+## Upgrading to 0.2.1
+
+SDK `0.2.1` is Rust source compatible with `0.2.0`. Use matching component
+versions, as in the dependency example below. The Mojom wire format, generated
+field types, Chromium pin and native C ABI v1 are unchanged.
+
+Eligible primary dispatch now carries an owned job value instead of a boxed
+closure. Incoming typed header parsing uses the bytes returned during handle
+extraction, avoiding a second native data lookup while retaining the raw message
+for bad-message reporting. Existing ownership, lock-release, sequence, FIFO and
+fallback rules remain. Empty native payloads also safely handle a null byte
+pointer with length zero; a null pointer for non-empty data is still invalid.
+Six message-read native tests passed on macOS x86_64. These mechanical changes
+and correctness checks do not establish a measured p99 improvement.
+
+## Historical 0.2.0 migration
 
 For version `0.2.0`, upgrade the SDK crates and
 `mojom-build` together and regenerate protocol bindings. New compact-array AST
@@ -21,19 +36,19 @@ Public named AST conversion and custom Context defaults are retained. The Mojom
 wire format, Chromium pin and native C ABI v1 remain unchanged; historical
 registry `0.1.0` consumers are used for wire compatibility checks.
 
-Outgoing headers now have a stack encoding path, and SDK watchers use a
+Version `0.2.0` added a stack encoding path for outgoing headers, and SDK watchers use a
 single-event trap arming helper. Public owned-message and `arm()` interfaces
 are preserved. Their timing and tail-latency effects require separate measured
 comparisons.
 
-Eligible primary-only interfaces may dispatch at the end of their existing
+Since `0.2.0`, eligible primary-only interfaces may dispatch at the end of their existing
 posted watcher task. This preserves the bound sequence, per-pipe FIFO and
 asynchronous receive boundary, but removes the guarantee of an extra second
 task turn relative to unrelated runner tasks. Handlers do not run synchronously
 on the sending Write call stack. Associated interfaces and ineligible states
 retain posted routing; once primary-only eligibility is lost it is not restored.
-Four native routing tests passed on macOS x86_64. Eight formal comparison runs
-completed on that target, but the ABBA and BAAB tail-latency results disagree;
+For `0.2.0`, four native routing tests passed on macOS x86_64. Eight formal comparison runs
+completed for that version, but the ABBA and BAAB tail-latency results disagree;
 this does not establish that p99 regressions are solved or validate other
 platforms.
 
@@ -44,10 +59,10 @@ client and server. Add these dependencies to its `Cargo.toml`:
 
 ```toml
 [dependencies]
-ipc = { package = "mojo-ipc", version = "0.2.0" }
+ipc = { package = "mojo-ipc", version = "=0.2.1" }
 
 [build-dependencies]
-mojom-build = "0.2.0"
+mojom-build = "=0.2.1"
 ```
 
 Generation requires **Python 3.10 or newer**. The parser, generator, templates,

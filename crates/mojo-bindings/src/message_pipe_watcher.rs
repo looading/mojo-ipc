@@ -14,16 +14,14 @@ use system::trap::{
     HandleSignals, SingleEventArmResult, Trap, TrapError, TrapEvent, TriggerCondition,
 };
 
+use crate::multiplex_router::DeferredMessageJob;
+
 // TODO(crbug.com/470438844): Replace some/all of the std::sync imports with
 // chromium sequenced equivalents once those are implemented (figure out which,
 // if any, need to be replaced).
 // TODO(crbug.com/477584253): Replace std::sync with std::nonpoison if there are
 // any non-sequenced versions remaining.
 use std::sync::{Arc, Mutex, Weak};
-
-/// A router dispatch selected while reading a message, but run after the
-/// watcher callback lock and temporary endpoint ownership have been released.
-pub(crate) type DeferredMessageJob = Box<dyn FnOnce() + Send + 'static>;
 
 type DeferredMessageHandler = dyn FnMut(ReadableWithHandlesMessage, ResponseSender) -> Option<DeferredMessageJob>
     + Send
@@ -376,7 +374,7 @@ impl MessagePipeWatcher {
             // ownership of the endpoint. In particular, dropping the primary
             // receiver/remote inside the handler must be able to close it.
             drop(watcher_state);
-            job();
+            job.run();
             if let Some(state) = state_weak.upgrade() {
                 Self::try_arm(&state);
             }

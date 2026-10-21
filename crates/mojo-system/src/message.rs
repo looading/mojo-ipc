@@ -187,14 +187,35 @@ impl ReadableWithHandlesMessage {
     /// # Possible Error Codes
     /// - `Aborted`: if the message is in an unrecoverable State.
     pub fn read_data(self) -> MojoResult<(Vec<UntypedHandle>, ReadableBytesOnlyMessage)> {
+        self.read_data_with(|_, handles| handles)
+    }
+
+    /// Consume the message's bytes and attached handles in one operation.
+    ///
+    /// The callback borrows the bytes from the same native call that extracts
+    /// the handles. It runs exactly once on success, before ownership of the
+    /// message is returned, and is not called on error. Its result cannot
+    /// retain a borrow of the message buffer. The returned bytes-only message
+    /// keeps the original native owner available for bad-message reporting.
+    ///
+    /// If the callback unwinds, both the message and the handles it received
+    /// are released by their ordinary Rust owners. No native buffer pointer is
+    /// cached or transferred to a Rust allocation.
+    #[doc(hidden)]
+    pub fn read_data_with<T>(
+        self,
+        f: impl FnOnce(&[u8], Vec<UntypedHandle>) -> T,
+    ) -> MojoResult<(T, ReadableBytesOnlyMessage)> {
         // First, query the message to see how many handles are attached.
         let num_handles = match message::MojoGetMessageData(
             &self.message_handle,
             Some(Vec::new().spare_capacity_mut()),
         ) {
-            // If the call succeeded, then no handles were attached, and we're done!
-            message::GetMessageDataStatus::Success { .. } => {
-                return Ok((vec![], self.into()));
+            // With zero capacity, success means no handles were attached.
+            // Use these bytes before moving their native owner below.
+            message::GetMessageDataStatus::Success { bytes, .. } => {
+                let result = f(bytes, Vec::new());
+                return Ok((result, self.into()));
             }
             message::GetMessageDataStatus::NotEnoughCapacity {
                 num_handles_attached,
@@ -212,14 +233,15 @@ impl ReadableWithHandlesMessage {
         {
             // If the call succeeded, then we successfully read the attached handles!
             message::GetMessageDataStatus::Success {
+                bytes,
                 num_handles_written,
-                ..
             } => {
                 // SAFETY: `MojoGetMessageData` guarantees that the first
                 // `num_handles_written` elements of `handles`
                 // are now initialized.
                 unsafe { handles.set_len(num_handles_written) };
-                return Ok((handles, self.into()));
+                let result = f(bytes, handles);
+                return Ok((result, self.into()));
             }
             message::GetMessageDataStatus::NotEnoughCapacity { .. } => {
                 // We just allocated enough capacity

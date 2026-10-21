@@ -4,7 +4,7 @@ An unofficial component of the [mojo-ipc SDK](https://github.com/looading/mojo-i
 
 Implements the Mojom wire value model, binary serialization and deserialization used by generated bindings.
 
-This component is part of SDK `0.2.0`.
+This component is part of SDK `0.2.1`.
 Keep the SDK component versions aligned when upgrading.
 
 Upstream Chromium is pinned to `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`.
@@ -27,9 +27,9 @@ nullable elements and other element types retain their scalar semantics.
 Bool arrays use LSB bit packing, and floats preserve their IEEE bit patterns.
 Enums and handles/endpoints keep their validated generic path.
 
-This is a Rust source API change from `0.1.0`, including exhaustive AST matches
+The `0.2.0` transition is a Rust source API change from `0.1.0`, including exhaustive AST matches
 and representation equality/hash/order. The hidden serialization-only trait
-hook and derive must be upgraded together to `0.2.0`; public named AST conversion
+hook and derive must be kept aligned with SDK `0.2.1`; public named AST conversion
 and custom Context conversion defaults retain their previous semantics. Wire
 compatibility is verified independently against historical registry `0.1.0`
 consumers. The native C ABI remains v1.

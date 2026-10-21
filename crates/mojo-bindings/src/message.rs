@@ -38,10 +38,16 @@ impl MojomMessage {
     /// If parsing fails, this will return `None` and report the original
     /// message as malformed.
     pub fn parse_raw_or_report_bad_message(msg: ReadableWithHandlesMessage) -> Option<Self> {
-        let (handles, mut msg_bytes_only) = msg.read_data().unwrap();
-
-        let raw_bytes = msg_bytes_only.read_bytes().unwrap();
-        let (remaining_bytes, header) = match MessageHeader::deserialize(raw_bytes) {
+        let ((parsed, handles), mut msg_bytes_only) = msg
+            .read_data_with(|raw_bytes, handles| {
+                let parsed = MessageHeader::deserialize(raw_bytes)
+                    .map(|(remaining_bytes, header)| (header, remaining_bytes.to_vec()));
+                // Return the handles even on a header error, keeping their
+                // destruction after reporting against the original owner.
+                (parsed, handles)
+            })
+            .unwrap();
+        let (header, payload) = match parsed {
             Ok(data) => data,
             Err(err) => {
                 let _ = msg_bytes_only.report_bad_message(&err.to_string());
@@ -49,9 +55,6 @@ impl MojomMessage {
             }
         };
 
-        // We might be able to avoid allocating here if we had a better
-        // MojomMessage type.
-        let payload = remaining_bytes.to_vec();
         Some(MojomMessage {
             header,
             payload,
@@ -98,6 +101,10 @@ impl MojomMessage {
         (serialized, self.handles)
     }
 }
+
+#[cfg(test)]
+#[path = "message_native_tests.rs"]
+mod native_tests;
 
 impl From<MojomMessage> for SendableMessage {
     fn from(msg: MojomMessage) -> Self {

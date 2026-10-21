@@ -46,9 +46,42 @@ use super::control_messages::{
 };
 
 use crate::message::MojomMessage;
-use crate::message_pipe_watcher::{DeferredMessageJob, MessagePipeWatcher, ResponseSender};
+use crate::message_pipe_watcher::{MessagePipeWatcher, ResponseSender};
 
 pub(crate) use super::endpoint_registry::*;
+
+/// An owned primary dispatch selected under the router lock and invoked only
+/// after the watcher releases its callback guard and temporary endpoint owner.
+/// Its response sender retains the same weak endpoint reference as the posted
+/// read callback; the dispatch value itself requires no heap allocation.
+pub(crate) struct DeferredMessageJob {
+    handler: MessageHandler,
+    message: MojomMessage,
+    response_sender: super::ResponseSender,
+}
+
+impl DeferredMessageJob {
+    fn new(
+        handler: MessageHandler,
+        message: MojomMessage,
+        response_sender: super::ResponseSender,
+    ) -> Self {
+        Self {
+            handler,
+            message,
+            response_sender,
+        }
+    }
+
+    pub(crate) fn run(self) {
+        let Self {
+            handler,
+            message,
+            response_sender,
+        } = self;
+        (*handler)(message, response_sender);
+    }
+}
 
 /// A `Task` object represents an incoming event that needs to be processed in
 /// FIFO order.
@@ -477,7 +510,7 @@ impl MultiplexRouter {
                 drop(shared_state);
                 let response_sender =
                     super::ResponseSender::rust(self.clone_and_downgrade(), PRIMARY_INTERFACE_ID);
-                return Some(Box::new(move || (*handler)(message, response_sender)));
+                return Some(DeferredMessageJob::new(handler, message, response_sender));
             }
 
             // A posted handler must never coexist with later fast eligibility.

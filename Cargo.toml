@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*", "examples/protocol", "benchmarks/ipc", "xtask"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 license = "BSD-3-Clause"
 repository = "https://github.com/looading/mojo-ipc"
@@ -26,14 +26,14 @@ libloading = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-raw_ffi = { package = "mojo-sys", path = "crates/mojo-sys", version = "=0.2.0" }
-c_mojo_api = { package = "mojo-c-api", path = "crates/mojo-c-api", version = "=0.2.0" }
-system = { package = "mojo-system", path = "crates/mojo-system", version = "=0.2.0" }
-mojom_value_parser_core = { package = "mojom-codec-core", path = "crates/mojom-codec-core", version = "=0.2.0" }
-parsing_attribute = { package = "mojom-derive", path = "crates/mojom-derive", version = "=0.2.0" }
-mojom_value_parser = { package = "mojom-codec", path = "crates/mojom-codec", version = "=0.2.0" }
-bindings = { package = "mojo-bindings", path = "crates/mojo-bindings", version = "=0.2.0" }
-sequenced_task_runner = { package = "mojo-sequence", path = "crates/mojo-sequence", version = "=0.2.0" }
-mojo-ipc = { path = "crates/mojo-ipc", version = "=0.2.0" }
-mojom-build = { path = "crates/mojom-build", version = "=0.2.0" }
+raw_ffi = { package = "mojo-sys", path = "crates/mojo-sys", version = "=0.2.1" }
+c_mojo_api = { package = "mojo-c-api", path = "crates/mojo-c-api", version = "=0.2.1" }
+system = { package = "mojo-system", path = "crates/mojo-system", version = "=0.2.1" }
+mojom_value_parser_core = { package = "mojom-codec-core", path = "crates/mojom-codec-core", version = "=0.2.1" }
+parsing_attribute = { package = "mojom-derive", path = "crates/mojom-derive", version = "=0.2.1" }
+mojom_value_parser = { package = "mojom-codec", path = "crates/mojom-codec", version = "=0.2.1" }
+bindings = { package = "mojo-bindings", path = "crates/mojo-bindings", version = "=0.2.1" }
+sequenced_task_runner = { package = "mojo-sequence", path = "crates/mojo-sequence", version = "=0.2.1" }
+mojo-ipc = { path = "crates/mojo-ipc", version = "=0.2.1" }
+mojom-build = { path = "crates/mojom-build", version = "=0.2.1" }
 

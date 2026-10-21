@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.1 (2026-10-21)
+
+This patch retains Rust source compatibility with `0.2.0`, the Mojom wire
+format, Chromium pin and native C ABI v1. Keep SDK component versions aligned.
+
+- Replace the eligible primary dispatch's boxed closure with a concrete owned
+  job value. Preserve lock release, weak endpoint ownership, bound sequence,
+  per-pipe FIFO, permanent fallback and public raw-watcher behavior.
+- Parse typed incoming headers using the bytes returned by handle extraction,
+  avoiding a second native data lookup. Retain the owned raw message and
+  malformed-message reporting and handle cleanup behavior.
+- Fix empty native message buffers: a null pointer with zero bytes is safely
+  represented as an empty Rust slice; non-empty buffers still require a valid
+  pointer.
+- Add six real macOS x86_64 message-read native tests. The four existing routing
+  tests and the trap and message-parts native tests also passed separately.
+  These correctness checks do not establish a measured latency improvement.
+- Complete 56 case-interleaved ABBA/BAAB trials on macOS x86_64. The 64 KiB
+  typed run-p99 medians decreased 1.01% / 8.41% in the respective blocks,
+  while 0 B, 64 B and 1 MiB typed p99 retained regressions. Preserve all
+  40 adverse scoped comparisons; do not treat this patch as a universal p99
+  fix. See `benchmarks/P99_BAAB_OPTIMIZATION.md` for the full comparison.
+
 ## 0.2.0 (2026-10-21)
 
 This minor version changes the pre-1.0 Rust source API through new public compact-array AST
