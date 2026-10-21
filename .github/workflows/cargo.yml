@@ -27,6 +27,8 @@ jobs:
         run: cargo test --workspace --all-targets --locked
       - name: Official Python generator boundary tests
         run: python -B tools/mojom/test_codegen.py
+      - name: Native release tooling tests (no Chromium checkout)
+        run: python -B -m unittest discover -s native/scripts -p 'test_release.py' -v
       # A green job here does not certify the native Mojo runtime. Build and
       # run native/scripts/build_native.py --smoke in a pinned Chromium checkout
       # on each target, then run the real two-process Rust example separately.

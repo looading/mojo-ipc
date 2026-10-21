@@ -10,8 +10,9 @@
 Windows x64 已在 macOS 上完成官方 Core DLL 交叉编译，以及 cargo-xwin 的 Rust
 完整编译和链接；Windows 运行验收仍待执行。Linux、macOS arm64 已通过 Rust 编译检查，
 原生构建和运行仍待验收。
-当前源码的 Cargo 包版本为 `0.2.1`。原生运行库需单独构建和提供，
-尚未发布通用预编译包。
+当前源码的 Cargo 包版本为 `0.2.1`。已接入 GitHub Actions 四平台预构建和 Release
+分发流程，首次远端构建与发布仍待执行。原生库下载和使用方式见
+[预构建库说明](.github/NATIVE_WORKFLOW.md)。
 
 `0.2.1` 保留 `0.2.0` 的 Rust API、Mojom wire 格式、Chromium pin 和原生 ABI。
 接收时复用提取 handles 的原生查询结果，省去重复的 `GetMessageData`；
@@ -78,8 +79,9 @@ cargo test --workspace --all-targets --locked
 `$env:MOJOM_PYTHON = 'C:\path\python.exe'`。
 `.github/workflows/cargo.yml` 提供三 OS 的 Rust/Mojom CI，以及 Linux 上通过 cargo-xwin
 完整链接 Windows Rust 目标的 job；
-`.github/workflows/native.yml` 提供四个目标的手动原生验收，依赖已有的 self-hosted runner
-和固定 Chromium checkout，配置要求见 `.github/NATIVE_WORKFLOW.md`。
+`.github/workflows/native.yml` 使用 GitHub-hosted runner，从固定 Chromium 源码和工具链
+开始构建四个原生目标。手动运行可下载构建包；推送匹配 Cargo 版本的 tag 后，四平台
+验收全部通过才发布 GitHub Release。完整流程见 `.github/NATIVE_WORKFLOW.md`。
 两个 workflow 均未在远端执行。
 
 ## 性能与稳定性基准
@@ -183,8 +185,12 @@ let receiver = pending_receiver.bind_with_options(
 
 ## 构建真正的原生库
 
-原生生产流程需要固定版本的完整 Chromium checkout 及其官方平台构建依赖；
-这是 SDK 维护者的工作，之后才能分发预编译包给普通宿主。当前仓库只提供源码构建入口。
+SDK 维护者可通过 GitHub Actions 自动准备固定版本的 Chromium 源码和平台构建依赖，
+验收通过后分发预构建库。包内含动态库、C 头文件、构建与验收记录及依赖许可证，
+下载后校验 `SHA256SUMS`，再设置 `MOJO_RUNTIME_LIBRARY` 使用。
+[构建、发布与下载步骤](.github/NATIVE_WORKFLOW.md)包含各平台目标和版本化下载地址。
+
+本地源码构建仍需要提前准备完整 Chromium checkout 及官方平台依赖：
 
 ```sh
 python3 native/scripts/build_native.py \

@@ -1,65 +1,169 @@
-# Manual native acceptance workflow
+# Native builds and prebuilt releases
 
-`workflows/native.yml` is a manually dispatched configuration. It has not been
-executed here and is not evidence that any native target has passed. It neither
-creates runners nor uses GitHub-hosted runner labels. A dispatch schedules four
-existing self-hosted runners:
+`workflows/native.yml` builds the official Mojo Core on fresh GitHub-hosted VMs.
+It provisions Chromium and its dependencies; no self-hosted runner,
+`CHROMIUM_SRC` setting, prewarmed cache, or personal access token is required.
 
-| Rust target | Required runner labels |
-| --- | --- |
-| `x86_64-unknown-linux-gnu` | `self-hosted`, `Linux`, `X64` |
-| `x86_64-apple-darwin` | `self-hosted`, `macOS`, `X64` |
-| `aarch64-apple-darwin` | `self-hosted`, `macOS`, `ARM64` |
-| `x86_64-pc-windows-msvc` | `self-hosted`, `Windows`, `X64` |
+| Rust target | GitHub-hosted runner | Library |
+| --- | --- | --- |
+| `x86_64-unknown-linux-gnu` | `ubuntu-24.04` | `libmojo_rs_native.so` |
+| `x86_64-apple-darwin` | `macos-15-intel` | `libmojo_rs_native.dylib` |
+| `aarch64-apple-darwin` | `macos-15` | `libmojo_rs_native.dylib` |
+| `x86_64-pc-windows-msvc` | `windows-2025-vs2026` | `mojo_rs_native.dll` |
 
-No remote repository or runner registration is assumed. An unavailable matching
-runner leaves its job queued; the workflow does not provision a replacement.
-Use trusted, appropriately permissioned runners that already support checkout,
-setup-python, and composite Bash actions (including Git Bash on Windows).
+## Run a build
 
-The separate `cargo.yml` workflow also has a `windows-cross` job on Ubuntu with
-cargo-xwin 0.23.1. It compiles and links all Rust Windows targets without a
-Windows runner. It does not build the Chromium GN DLL or run Windows executables.
-The native producer supports a separate macOS/Linux-to-Windows build-only path;
-its SDK/toolchain setup is documented in `native/README.md`. The real Windows
-runtime gates below remain required, regardless of the build host used.
+After this workflow is available on the repository's default branch, select
+**Actions → Native Mojo build and release → Run workflow**. Leave `publish`
+unchecked for an acceptance build. Each successful matrix job uploads an
+Actions artifact named `mojo-native-package-<target>`, retained for 14 days.
 
-Before dispatch, configure each runner service's environment:
+With GitHub CLI:
 
-* `CHROMIUM_SRC` is an absolute path to a complete Chromium `src` checkout at
-  `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`. Keep it outside the Actions SDK
-  workspace, with neither directory nested in the other. A guard checks this
-  before `actions/checkout` can clean or replace workspace contents.
-* The checkout's DEPS, downloaded Clang, platform SDKs and normal Chromium build
-  dependencies have already been installed for that host architecture.
-* `git`, `gclient`, `gn`, and `autoninja` or `ninja` are available through `PATH`,
-  using the checkout's configured `depot_tools` environment. Preserve any local
-  platform toolchain settings required by the normal Chromium build.
-* The runner can install Python 3.12 and Rust 1.96.0 through the setup actions and
-  has sufficient disk space, memory, tool-cache permissions, and network access
-  for those tools and locked Cargo dependencies.
+```sh
+gh workflow run native.yml --ref main
+```
 
-After the workspace guard, the prerequisite step checks the host OS/CPU, source
-markers, downloaded compiler, tools, and exact Chromium HEAD before Rust
-installation or native compilation. It fails with explicit missing-environment
-diagnostics. It does not clone Chromium,
-run `gclient sync`, reset the checkout, or supply missing platform SDKs. The native
-builder installs its marked overlay into `CHROMIUM_SRC/sdk/mojo_rs/native` and
-uses a target-specific output directory; existing checkout ownership is subject
-to that builder's checks.
+## Publish a version
 
-Each scheduled job runs Cargo checks/tests, the real official Mojom boundary
-tests, native `build_native.py --smoke`, the two independently launched processes
-in `named_smoke.py`, and then the Rust parent/child typed IPC example with the
-freshly copied `.so`, `.dylib`, or `.dll`. A failed gate prevents the tested-native
-artifact upload. Successful runs upload `dist/<target>/` containing the native
-library, C header, `native-manifest.json`, named-fixture logs, `typed-echo.log`, and
-a separate `acceptance-manifest.json` recording that workflow run and its
-completed gates. Available fixture logs from a failed job are uploaded separately
-as a diagnostics artifact; they do not constitute an acceptance receipt.
+Push a new `v<workspace.package.version>` tag containing this workflow and the
+release source. Version preflight runs before provisioning any native producer.
+All four targets must pass before the publishing job starts. Branch dispatches
+cannot publish a Release. The workflow uses its built-in `GITHUB_TOKEN`; only
+the publishing job receives `contents: write`.
 
-The workflow validates its native manifest and checksum before starting Rust.
-Its green result covers the encoded smoke, local named-channel fixture, and
-typed parent/child scenarios. It does not certify arbitrary launchd/sandbox/user
-namespace deployments, long-running stress, protocol compatibility across SDK
-versions, or the final OS runtime-dependency audit.
+For example, after preparing the SDK source and its internal Cargo versions for
+the next release at `0.2.2`:
+
+```sh
+git tag v0.2.2
+git push origin v0.2.2
+```
+
+Existing `v0.2.0` and `v0.2.1` tags predate this workflow. Use a new version/tag
+containing the release changes rather than moving an existing tag. Crate
+publication is separate from native Release publication.
+
+A manual dispatch on a matching version tag can also publish:
+
+```sh
+gh workflow run native.yml --ref v0.2.2 -f publish=true
+```
+
+The publishing job verifies the complete target set, every archive checksum,
+all packaged member hashes, and acceptance provenance. It uploads four archives
+and `SHA256SUMS` to a draft Release, checks the server's asset hashes, then
+publishes. An interrupted upload leaves a draft that can be retried. Existing
+published assets are never replaced with different bytes. A prerelease Cargo
+version produces a prerelease on GitHub.
+
+## Cold producer setup
+
+`native/scripts/prepare_hosted.py` runs only when `GITHUB_ACTIONS=true` and
+`RUNNER_ENVIRONMENT=github-hosted`. Its new producer directory is outside the SDK
+checkout, under `RUNNER_TEMP`. It removes known unused preinstalled tools on the
+disposable VM; macOS cleanup preserves the selected Xcode. It never cleans a
+developer's checkout or an existing producer directory.
+
+It checks out Chromium at
+`bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd` and depot_tools at
+`3a8af1e64be01a524f7d1c46daf8c2dcac63ff85` (the revision in that Chromium DEPS).
+`gclient sync --no-history --shallow` uses Chromium's `small` checkout
+configuration, followed by the normal hooks. Optional coverage, telemetry,
+OpenXR, PGO and remote execution downloads are disabled. Required source and
+prebuilt dependencies still resolve from the pinned DEPS; no hand-selected
+replacement for the native dependency graph is used.
+
+Linux installs Chromium build dependencies. macOS uses installed Xcode with
+`use_system_xcode=true`. Windows uses Visual Studio 2026 and installs Microsoft's
+SDK `10.0.28000.2270` including debugging tools if its headers are absent. The
+installer is pinned by SHA-256; the workflow verifies the installed SDK files.
+The SDK is obtained from the
+[official Windows SDK downloads](https://learn.microsoft.com/en-us/windows/apps/windows-sdk/downloads).
+
+Native compilation uses `--jobs 2`, disables debug symbols, and uses local Ninja
+without remote execution. Linux also uses `use_glib=false` to avoid requiring
+GLib/GObject in consumer hosts. The cold source/toolchain checkout is still large.
+Provisioning reports available disk space and requires at least 25 GiB free
+after cleanup; every native job has the GitHub-hosted six-hour timeout. There is
+no dependency on an Actions cache containing the Chromium checkout.
+
+## Acceptance and package contents
+
+Each target runs Cargo check/tests, the real official Mojom generator boundary
+tests, native smoke, the independent-process named-channel fixture, and the Rust
+typed parent/child example with the freshly built library. Failed checks prevent
+package upload. Available failure fixture logs are uploaded separately.
+
+`package_native.py` validates the pin, native ABI, target, SDK commit, workflow
+run, library hash and every acceptance gate. It inspects architecture, exported
+symbols and direct/delay-load dependencies using `readelf`, macOS tools, or
+`llvm-readobj`. Unexpected exports or non-system dependencies stop packaging.
+The supported public export is `MojoRsGetApiV1`; Windows also permits Chromium's
+private `GetHandleVerifier`. macOS additionally probes whether loading the
+library preserves the host's default malloc zone.
+
+The pinned Chromium licensing tool collects the runtime target's shipped
+dependency notices. Its `LICENSES_GN_PATH` hook preserves the overlay's GN graph
+root through a small wrapper, tested with the producer's pinned GN. Missing
+notices fail the job. The archive
+`mojo-native-<version>-<target>.tar.gz` contains a matching top-level directory with:
+
+- The runtime `.so`, `.dylib`, or `.dll`, and `mojo_rs_native.h`.
+- `package-manifest.json`, `native-manifest.json` and `acceptance-manifest.json`.
+- `dependency-audit.json` and the native tools' `dependency-audit.txt` output.
+- `LICENSE`, `CHROMIUM_LICENSE` and `THIRD_PARTY_NOTICES.txt`.
+
+Build trees, native test executables and private fixture logs are excluded from
+consumer archives. The Actions artifact also includes an archive `.sha256` file;
+the Release combines those hashes into `SHA256SUMS`.
+
+## Download and use
+
+After a successful Release, asset URLs have the form:
+
+```text
+https://github.com/looading/mojo-ipc/releases/download/v<version>/mojo-native-<version>-<target>.tar.gz
+https://github.com/looading/mojo-ipc/releases/download/v<version>/SHA256SUMS
+```
+
+For example, for a released macOS arm64 version:
+
+```sh
+version=0.2.2
+target=aarch64-apple-darwin
+asset="mojo-native-$version-$target.tar.gz"
+base="https://github.com/looading/mojo-ipc/releases/download/v$version"
+curl -fL "$base/$asset" -o "$asset"
+curl -fL "$base/SHA256SUMS" -o SHA256SUMS
+awk -v file="$asset" '$2 == file' SHA256SUMS | shasum -a 256 -c -
+tar -xzf "$asset"
+export MOJO_RUNTIME_LIBRARY="$PWD/mojo-native-$version-$target/libmojo_rs_native.dylib"
+cargo run -p mojo-example-protocol --example echo
+```
+
+On Linux, use the Linux target and `.so`; checksum verification can use
+`sha256sum --check --ignore-missing SHA256SUMS`. On Windows, use the Windows
+target, check with `Get-FileHash -Algorithm SHA256`, extract with `tar -xzf`, and
+set `$env:MOJO_RUNTIME_LIBRARY` to the extracted `mojo_rs_native.dll`.
+
+Use the matching SDK crate version and retain the included license notices when
+redistributing. Native downloads are explicit; Cargo does not automatically
+download or load them. Dependency audits record OS/library requirements, not a
+promise of compatibility with every older OS. A green workflow also does not
+certify arbitrary sandbox/bootstrap namespaces, long-running stress or protocol
+compatibility across SDK versions.
+
+## Local verification boundary
+
+Ordinary `cargo.yml` CI and the native preflight run offline release-tooling
+tests without downloading Chromium:
+
+```sh
+python3 -B -m unittest discover -s native/scripts -p test_release.py -v
+```
+
+The workflow has not been executed remotely as part of this change. Offline
+tests, actionlint, and a small native inspection fixture validate the release
+tooling; actual Mojo build and runtime results require the first hosted matrix
+run. Existing historical native validation is documented in `VALIDATION.md`.
