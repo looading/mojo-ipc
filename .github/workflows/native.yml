@@ -124,6 +124,42 @@ jobs:
           python-version: '3.12'
           architecture: ${{ matrix.cpu }}
 
+      - name: Select an installed macOS SDK with Chromium module maps
+        if: runner.os == 'macOS'
+        run: |
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          def compatible_xcodes(applications):
+              required = ["DarwinBasic.modulemap", "DarwinFoundation1.modulemap",
+                          "DarwinFoundation2.modulemap", "DarwinFoundation3.modulemap",
+                          "libunwind.modulemap"]
+              candidates = {}
+              for application in applications.glob("Xcode*.app"):
+                  application = application.resolve()
+                  sdks = application / "Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
+                  for sdk in sdks.glob("MacOSX*.sdk"):
+                      sdk = sdk.resolve()
+                      if all((sdk / "usr/include" / name).is_file() for name in required):
+                          settings = json.loads((sdk / "SDKSettings.json").read_text())
+                          version = str(settings.get("Version", ""))
+                          if re.fullmatch(r"\d+(?:\.\d+)*", version):
+                              candidates[(application, sdk)] = tuple(int(n) for n in version.split("."))
+              return sorted(candidates, key=lambda item: candidates[item])
+
+          choices = compatible_xcodes(Path("/Applications"))
+          if not choices:
+              raise SystemExit("no installed Xcode SDK contains the pinned Chromium DarwinFoundation module maps")
+          application, sdk = choices[-1]
+          developer = application / "Contents/Developer"
+          subprocess.run(["sudo", "xcode-select", "--switch", str(developer)], check=True)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"DEVELOPER_DIR={developer}\nSDKROOT={sdk}\n")
+          print(f"Selected compatible Xcode: {application}; macOS SDK: {sdk}")
+
       - name: Install pinned Rust 1.96.0
         uses: dtolnay/rust-toolchain@stable
         with:

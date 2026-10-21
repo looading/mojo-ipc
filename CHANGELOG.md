@@ -23,6 +23,9 @@ API, Mojom wire format, Chromium pin and native C ABI v1 remain unchanged from
   depot_tools Python launchers that may not have a bootstrapped interpreter.
   Allow an existing SDK tag to be rebuilt with a corrected workflow while
   retaining its source commit and recording the workflow commit separately.
+- Select an installed Xcode SDK containing Chromium's required DarwinFoundation
+  module maps before provisioning a macOS producer, instead of relying on the
+  runner image's older default SDK.
 
 ## 0.2.1 (2026-10-21)
 

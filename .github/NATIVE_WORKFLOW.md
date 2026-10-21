@@ -87,8 +87,11 @@ OpenXR, PGO and remote execution downloads are disabled. Required source and
 prebuilt dependencies still resolve from the pinned DEPS; no hand-selected
 replacement for the native dependency graph is used.
 
-Linux installs Chromium build dependencies. macOS uses installed Xcode with
-`use_system_xcode=true`. Windows uses Visual Studio 2026 and installs Microsoft's
+Linux installs Chromium build dependencies. macOS selects an installed Xcode
+whose SDK contains `DarwinBasic`, `DarwinFoundation1/2/3` and `libunwind` module
+maps, sets `DEVELOPER_DIR`/`SDKROOT`, and uses `use_system_xcode=true`. This check
+runs before Chromium downloads; the image's default macOS 15.5 SDK does not
+contain the Foundation module maps required by this Chromium pin. Windows uses Visual Studio 2026 and installs Microsoft's
 SDK `10.0.28000.2270` including debugging tools if its headers are absent. The
 installer is pinned by SHA-256; the workflow verifies the installed SDK files.
 The SDK is obtained from the
