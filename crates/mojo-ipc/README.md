@@ -26,11 +26,20 @@ let runtime = unsafe { Runtime::load_with_config("/trusted/libmojo_rs_native.dyl
 
 The supplied revision is checked exactly; it does not bypass source or ABI checks. A process cannot change the runtime path, broker/participant role or revision after successful initialization. Bindings and the Mojom generator retain their own official source provenance. See [native producer configuration](../../native/README.md#custom-source) for checkout/build commands and compatibility requirements.
 
-## Upgrading to 0.2.1
+## Upgrading to 0.3.0
 
-SDK `0.2.1` is Rust source compatible with `0.2.0`. Use matching component
-versions, as in the dependency example below. The Mojom wire format, generated
-field types, Chromium pin and native C ABI v1 are unchanged.
+Use matching `=0.3.0` SDK components and `mojom-build`, and regenerate shared
+protocol bindings together. The optional `mojo-service = "=0.3.0"` crate adds
+local service discovery, bounded business calls and process supervision above
+the existing typed IPC API. Keep its control definitions matched between peers.
+The default Chromium pin and native C ABI v1 remain unchanged; this does not
+assert Rust source compatibility between `0.3.0` and `0.2.x`.
+
+## Historical 0.2.1 patch
+
+SDK `0.2.1` retained Rust source compatibility with `0.2.0` when using matched
+components. That patch left the Mojom wire format, generated field types,
+Chromium pin and native C ABI v1 unchanged.
 
 Eligible primary dispatch now carries an owned job value instead of a boxed
 closure. Incoming typed header parsing uses the bytes returned during handle
@@ -75,10 +84,10 @@ client and server. Add these dependencies to its `Cargo.toml`:
 
 ```toml
 [dependencies]
-ipc = { package = "mojo-ipc", version = "=0.2.1" }
+ipc = { package = "mojo-ipc", version = "=0.3.0" }
 
 [build-dependencies]
-mojom-build = "=0.2.1"
+mojom-build = "=0.3.0"
 ```
 
 Generation requires **Python 3.10 or newer**. The parser, generator, templates,
@@ -160,16 +169,24 @@ The native image, Mojo Core, and IO/dispatch threads remain alive until process
 exit. Dropping `Runtime` does not unload them. There is no public shutdown,
 restart, or role-switch operation. Response callbacks follow the upstream
 success-only API; disconnect releases pending callbacks and invokes the optional
-disconnect handler. A Future-based client API is not provided.
+disconnect handler. These underlying bindings do not provide a Future-based
+client API; `mojo-service::CallClient` is a separate optional layer.
 
 ## Validation and current scope
 
-| Target | Verified |
+The [original v0.3.0 producer](https://github.com/looading/mojo-ipc/actions/runs/39783898906)
+at SDK commit `c22e29715d1db80e20297ff9476e4fae7a1a08bb` built all four targets.
+Each native job passed native smoke, independently launched named-channel IPC,
+Rust typed Echo, the service-network fixture and dependency/export audits.
+The [publication recovery](https://github.com/looading/mojo-ipc/actions/runs/39842433958)
+reuses those original artifacts; it does not rebuild the native libraries.
+
+| Target | Original native acceptance |
 | --- | --- |
-| macOS x86_64 | Native build, parent/child and independently launched process connections, and Rust typed Echo IPC executed successfully. |
-| Windows x86_64 MSVC | Native DLL and Rust examples cross-compiled and linked; PE inspected. Windows execution and IPC acceptance are pending. |
-| Linux x86_64 GNU | Rust compile checks passed. Native build and IPC execution are pending. |
-| macOS arm64 | Rust compile checks passed. Native build and IPC execution are pending. |
+| macOS x86_64 | [Native build and acceptance passed](https://github.com/looading/mojo-ipc/actions/runs/39783898906/job/119841954516). |
+| Windows x86_64 MSVC | [Native build and acceptance passed](https://github.com/looading/mojo-ipc/actions/runs/39783898906/job/119841954529). |
+| Linux x86_64 GNU | [Native build and acceptance passed](https://github.com/looading/mojo-ipc/actions/runs/39783898906/job/119841954285). |
+| macOS arm64 | [Native build and acceptance passed](https://github.com/looading/mojo-ipc/actions/runs/39783898906/job/119841954526). |
 
 Local Rust builds use Rust 1.96.0. A lower MSRV has not been established.
 The generator currently rejects semantic attributes other than `EnableIf` and

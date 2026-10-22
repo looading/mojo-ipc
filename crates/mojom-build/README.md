@@ -6,11 +6,14 @@ templates, PLY, Jinja2, MarkupSafe, and their licenses are included in the packa
 Generation needs Python 3.10 or newer; it does not install Python packages or
 download Chromium during a build. Set `MOJOM_PYTHON` to select an interpreter.
 
-For SDK `0.2.1`, use matching `0.2.1` runtime, codec
-and derive crates. This patch retains Rust source compatibility with `0.2.0`.
-The compact public AST variants introduced in `0.2.0` require low-level
-consumers upgrading from `0.1.0` to adapt and regenerate bindings; unchanged Mojom
-wire bytes do not establish Rust source API compatibility.
+For SDK `0.3.0`, use matching `=0.3.0` runtime, codec and derive crates, and
+regenerate shared protocol bindings together. This is a coordinated SDK release;
+Rust source compatibility with `0.2.x` is not asserted.
+
+Historically, the `0.2.1` patch retained Rust source compatibility with `0.2.0`
+when using matched components. The compact public AST variants introduced in
+`0.2.0` require low-level consumers upgrading from `0.1.0` to adapt and regenerate
+bindings; unchanged Mojom wire bytes do not establish Rust source API compatibility.
 
 Use a dedicated protocol crate. Its `build.rs` can contain:
 
@@ -40,10 +43,10 @@ include!(concat!(env!("OUT_DIR"), "/mojom/mod.rs"));
 
 ```toml
 [dependencies]
-ipc = { package = "mojo-ipc", version = "=0.2.1" }
+ipc = { package = "mojo-ipc", version = "=0.3.0" }
 
 [build-dependencies]
-mojom-build = "=0.2.1"
+mojom-build = "=0.3.0"
 ```
 
 For local development inside the source repository's `examples/protocol`, use
