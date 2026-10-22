@@ -214,7 +214,7 @@ class PackageTests(unittest.TestCase):
         sdk = self.root / "custom-sdk"
         (sdk / "native/include").mkdir(parents=True)
         (sdk / "Cargo.toml").write_text('[workspace.package]\nversion = "9.8.7"\n')
-        (sdk / "LICENSE").write_text("Custom SDK license\n")
+        (sdk / "LICENSE").write_bytes(b"Custom SDK license\r\n")
         (sdk / "native/include/mojo_rs_native.h").write_bytes(b"Custom SDK header\n")
         target = next(iter(package.TARGETS))
         artifact = self.artifact(target)
@@ -231,7 +231,7 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(json.loads(members["package-manifest.json"])["chromium_commit"], custom_revision)
         self.assertEqual(json.loads(members["native-manifest.json"])["chromium_commit"], custom_revision)
         self.assertEqual(members["mojo_rs_native.h"], b"Custom SDK header\n")
-        self.assertEqual(members["LICENSE"], b"Custom SDK license\n")
+        self.assertEqual(members["LICENSE"], (sdk / "LICENSE").read_bytes())
 
     def test_separate_sdk_checkout_controls_package_version_header_and_license(self):
         sdk = self.root / "sdk"
@@ -248,7 +248,7 @@ class PackageTests(unittest.TestCase):
             members = {Path(m.name).name: stream.extractfile(m).read() for m in stream.getmembers()}
         self.assertEqual(json.loads(members["package-manifest.json"])["sdk_version"], "9.8.7")
         self.assertEqual(members["mojo_rs_native.h"], b"SDK checkout header\n")
-        self.assertEqual(members["LICENSE"], b"SDK checkout license\n")
+        self.assertEqual(members["LICENSE"], (sdk / "LICENSE").read_bytes())
         for other in package.TARGETS:
             if other != target:
                 other_artifact = self.artifact(other)
