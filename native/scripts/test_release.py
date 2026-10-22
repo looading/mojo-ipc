@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+from contextlib import redirect_stderr
+import io
 import json
 import os
 from pathlib import Path
@@ -406,6 +408,60 @@ class PublishTests(unittest.TestCase):
         self.assertEqual(request.call_count, 1)
         run.assert_not_called()
 
+    def test_existing_exact_public_release_is_idempotent_without_writes(self):
+        with patch.object(release, "api", return_value=[[self.record(draft=False, matching=True)]]) as request, \
+             patch.object(release.subprocess, "run") as run:
+            release.publish([self.file], self.tag, SDK_COMMIT)
+        self.assertEqual(request.call_args_list[0].kwargs, {"paginate": True})
+        self.assertEqual(request.call_count, 1)
+        run.assert_not_called()
+
+    def five_files(self):
+        files = [self.file]
+        for name in ("second.tar.gz", "third.tar.gz", "fourth.tar.gz", "SHA256SUMS"):
+            path = self.file.parent / name
+            path.write_bytes(name.encode())
+            files.append(path)
+        return files
+
+    def assets(self, files):
+        return [{"name": path.name, "digest": "sha256:" + package.digest(path.read_bytes())} for path in files]
+
+    def test_partial_two_of_five_draft_uploads_only_three_missing_assets(self):
+        files = self.five_files()
+        initial = {**self.record(), "assets": self.assets(files[:2])}
+        complete = {**self.record(), "assets": self.assets(files)}
+        published = {**complete, "draft": False}
+        with patch.object(release, "api", side_effect=[[[initial]], complete, published]) as request, \
+             patch.object(release.subprocess, "run") as run:
+            release.publish(files, self.tag, SDK_COMMIT)
+        run.assert_called_once_with(["gh", "release", "upload", self.tag, "--repo", "test/repo", "--clobber",
+                                     *map(str, files[2:])], check=True)
+        self.assertEqual(request.call_args_list[-2].args, ("repos/test/repo/releases/7",))
+        self.assertEqual(request.call_args_list[-1].kwargs["payload"], {"draft": False, "prerelease": False})
+
+    def test_only_one_digest_mismatch_is_reuploaded(self):
+        files = self.five_files()
+        complete = {**self.record(), "assets": self.assets(files)}
+        initial = {**complete, "assets": [dict(asset) for asset in complete["assets"]]}
+        initial["assets"][2]["digest"] = "sha256:" + "0" * 64
+        with patch.object(release, "api", side_effect=[[[initial]], complete, {**complete, "draft": False}]), \
+             patch.object(release.subprocess, "run") as run:
+            release.publish(files, self.tag, SDK_COMMIT)
+        run.assert_called_once_with(["gh", "release", "upload", self.tag, "--repo", "test/repo", "--clobber",
+                                     str(files[2])], check=True)
+
+    def test_extra_draft_asset_is_named_and_rejected_before_any_mutation(self):
+        files = self.five_files()
+        initial = {**self.record(), "assets": self.assets(files) + [{"name": "obsolete.zip", "digest": None}]}
+        with patch.object(release, "api", return_value=[[initial]]) as request, \
+             patch.object(release.subprocess, "run") as run, \
+             self.assertRaisesRegex(RuntimeError, "unexpected assets.*obsolete.zip"):
+            release.publish(files, self.tag, SDK_COMMIT)
+        run.assert_not_called()
+        self.assertEqual(request.call_count, 1)
+        self.assertIsNone(request.call_args.kwargs.get("payload"))
+
     def test_upload_is_verified_before_publishing(self):
         with patch.object(release, "api", side_effect=self.server()), patch.object(release.subprocess, "run") as run:
             release.publish([self.file], self.tag, SDK_COMMIT)
@@ -457,6 +513,47 @@ class PublishTests(unittest.TestCase):
             return '{"draft": false}'
         with patch.object(release.subprocess, "check_output", side_effect=request):
             self.assertEqual(release.api("repos/test/repo/releases/7", payload={"draft": False}), {"draft": False})
+
+    def test_paginated_api_preserves_page_arrays_and_finds_second_page_draft(self):
+        unrelated = {**self.record(), "tag_name": "v0.0.1"}
+        pages = [[unrelated], [self.record(matching=True)]]
+        with patch.object(release.subprocess, "check_output", return_value=json.dumps(pages)) as request:
+            found = release.find_release("test/repo", self.tag)
+        self.assertEqual(found, pages[1][0])
+        request.assert_called_once_with(["gh", "api", "repos/test/repo/releases?per_page=100",
+                                         "--paginate", "--slurp"], text=True)
+
+
+class FailureReportingTests(unittest.TestCase):
+    def test_ci_annotation_escapes_percent_cr_lf_in_one_workflow_command(self):
+        stream = io.StringIO()
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}), redirect_stderr(stream):
+            release.report_ci_failure(RuntimeError("bad%0A\r\nnext"))
+        self.assertEqual(stream.getvalue(), "::error title=Native release publication failed::"
+                         "RuntimeError: bad%250A%0D%0Anext\n")
+
+    def test_annotation_is_disabled_outside_github_actions(self):
+        for value in ("", "false"):
+            with self.subTest(value=value), patch.dict(os.environ, {"GITHUB_ACTIONS": value}), \
+                 redirect_stderr(io.StringIO()) as stream:
+                release.report_ci_failure(RuntimeError("failure"))
+                self.assertEqual(stream.getvalue(), "")
+
+    def test_cli_reports_subprocess_failure_and_reraises_without_captured_stdout(self):
+        error = subprocess.CalledProcessError(1, ["gh", "api", "repos/test/repo/releases"],
+                                             output='{"body":"private draft body"}')
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}), \
+             patch.object(release, "main", side_effect=error), redirect_stderr(io.StringIO()) as stream, \
+             self.assertRaises(subprocess.CalledProcessError) as caught:
+            release.run_cli()
+        self.assertIs(caught.exception, error)
+        self.assertIn("::error title=Native release publication failed::CalledProcessError:", stream.getvalue())
+        self.assertNotIn("private draft body", stream.getvalue())
+
+    def test_phase_progress_is_flushed_and_does_not_dump_environment(self):
+        with patch.object(release, "print", create=True) as output:
+            release.phase("Verify package")
+        output.assert_called_once_with("[native-release] Verify package", flush=True)
 
 
 if __name__ == "__main__":

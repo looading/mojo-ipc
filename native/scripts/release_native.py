@@ -9,10 +9,25 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tarfile
 import tempfile
 
 from package_native import COMMIT, ROOT, TARGETS, digest, validate_receipts, version
+
+
+def phase(message: str) -> None:
+    print(f"[native-release] {message}", flush=True)
+
+
+def report_ci_failure(error: Exception) -> None:
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    # Workflow command data must escape percent first. Do not print captured
+    # subprocess stdout: it can contain complete private draft release records.
+    message = f"{type(error).__name__}: {error}"
+    message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    print(f"::error title=Native release publication failed::{message}", file=sys.stderr, flush=True)
 
 
 def validate_producer(run: dict, repository: str, run_id: str, *, completed: bool) -> tuple[str, str]:
@@ -32,6 +47,7 @@ def validate_producer(run: dict, repository: str, run_id: str, *, completed: boo
 
 def verify_packages(directory: Path, tag: str, sdk_commit: str, *, sdk_root: Path = ROOT,
                     workflow_commit: str | None = None) -> list[Path]:
+    phase("Verify the complete four-target native package set")
     sdk_version = version(sdk_root)
     if tag != "v" + sdk_version:
         raise RuntimeError("release tag does not match workspace.package.version")
@@ -40,6 +56,7 @@ def verify_packages(directory: Path, tag: str, sdk_commit: str, *, sdk_root: Pat
         raise RuntimeError("release requires exactly the complete four-target archive set")
     checksums = []
     for target, archive in zip(TARGETS, archives):
+        phase(f"Verify package for {target}")
         expected_checksum = f"{digest(archive.read_bytes())}  {archive.name}\n"
         if archive.with_name(archive.name + ".sha256").read_text(encoding="utf-8") != expected_checksum:
             raise RuntimeError(f"archive checksum mismatch: {archive.name}")
@@ -76,6 +93,7 @@ def verify_packages(directory: Path, tag: str, sdk_commit: str, *, sdk_root: Pat
             raise RuntimeError("package native dependency audit did not pass")
     checksum_file = directory / "SHA256SUMS"
     checksum_file.write_text("".join(sorted(checksums)), encoding="utf-8")
+    phase("All four packages passed checksum, provenance and acceptance verification")
     return [*archives, checksum_file]
 
 
@@ -106,8 +124,10 @@ def publish(files: list[Path], tag: str, sdk_commit: str) -> None:
     if os.environ.get("GITHUB_REF") != "refs/tags/" + tag:
         raise RuntimeError("publication requires running on the matching version tag")
     repository = os.environ["GITHUB_REPOSITORY"]
+    phase("Locate the release draft or existing published release")
     release = find_release(repository, tag)
     if release is None:
+        phase("Create a release draft for the verified tag")
         notes = (f"Native Mojo runtime {tag}\n\nSDK commit: {sdk_commit}\nChromium: {COMMIT}\nABI: 1\n\n"
                  "All four targets passed native smoke, independent-process named-channel, Rust typed IPC, "
                  "and native dependency/export checks. Each archive includes the C header, provenance, "
@@ -123,25 +143,36 @@ def publish(files: list[Path], tag: str, sdk_commit: str) -> None:
         if release is None:
             raise RuntimeError("created release draft is not visible to its publisher")
     expected = {p.name: "sha256:" + digest(p.read_bytes()) for p in files}
+    actual = {asset["name"]: asset.get("digest") for asset in release["assets"]}
     if not release["draft"]:
-        actual = {asset["name"]: asset.get("digest") for asset in release["assets"]}
         if actual != expected:
             raise RuntimeError("published release assets differ; refusing to overwrite a published release")
         print(f"Release {tag} already contains these exact assets")
         return
-    # Only drafts can be retried with replacement. Reuse already verified
-    # uploads after an interrupted publication instead of uploading them again.
-    actual = {asset["name"]: asset.get("digest") for asset in release["assets"]}
-    if actual != expected:
-        subprocess.run(["gh", "release", "upload", tag, "--repo", repository, "--clobber", *map(str, files)], check=True)
+    # Do not delete unfamiliar draft assets or replace healthy uploads during
+    # recovery. --clobber only replaces a supplied file with the same name; it
+    # cannot repair an extra-asset mismatch in the complete expected set.
+    unexpected = actual.keys() - expected.keys()
+    if unexpected:
+        names = ", ".join(repr(name) for name in sorted(unexpected))
+        raise RuntimeError(f"draft contains unexpected assets; refusing to upload or delete: {names}")
+    pending = [path for path in files if actual.get(path.name) != expected[path.name]]
+    if pending:
+        phase(f"Upload {len(pending)} missing or changed release assets")
+        subprocess.run(["gh", "release", "upload", tag, "--repo", repository, "--clobber", *map(str, pending)], check=True)
+    else:
+        phase("All expected draft assets already match; no upload needed")
     release_id = release["id"]
     endpoint = f"repos/{repository}/releases/{release_id}"
+    phase("Reverify the complete uploaded asset set by release ID")
     uploaded = api(endpoint)
     if {a["name"]: a.get("digest") for a in uploaded["assets"]} != expected:
         raise RuntimeError("uploaded release assets do not match the verified complete package set")
+    phase("Publish the verified release draft by release ID")
     published = api(endpoint, payload={"draft": False, "prerelease": "-" in tag})
     if published.get("draft") is not False or published.get("tag_name") != tag:
         raise RuntimeError("GitHub did not confirm the expected published release")
+    phase("GitHub confirmed the expected published release")
 
 
 def main() -> int:
@@ -161,5 +192,13 @@ def main() -> int:
     return 0
 
 
+def run_cli() -> int:
+    try:
+        return main()
+    except Exception as error:
+        report_ci_failure(error)
+        raise
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run_cli())
