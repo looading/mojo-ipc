@@ -208,7 +208,7 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(any(name.endswith("/THIRD_PARTY_NOTICES.txt") for name in names))
 
     def test_failed_stale_or_wrong_target_acceptance_cannot_be_packaged(self):
-        for key, value in (("native_smoke_passed", False), ("sdk_commit", "b" * 40),
+        for key, value in (("native_smoke_passed", False), ("service_network_passed", False), ("sdk_commit", "b" * 40),
                            ("target", "invalid"), ("github_run_id", "old-run")):
             with self.subTest(key=key):
                 target = next(iter(package.TARGETS))

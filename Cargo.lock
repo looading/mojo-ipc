@@ -257,6 +257,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "mojo-service"
+version = "0.2.2"
+dependencies = [
+ "mojo-ipc",
+ "mojom-build",
+]
+
+[[package]]
+name = "mojo-service-network"
+version = "0.2.2"
+dependencies = [
+ "mojo-ipc",
+ "mojo-service",
+ "mojom-build",
+]
+
+[[package]]
 name = "mojo-sys"
 version = "0.2.2"
 dependencies = [

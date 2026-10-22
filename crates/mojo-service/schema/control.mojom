@@ -1,0 +1,57 @@
+module mojo.service;
+
+enum Status {
+  Ok,
+  NotFound,
+  PermissionDenied,
+  AlreadyRegistered,
+  IncompatibleVersion,
+  InvalidArgument,
+  StaleGeneration,
+  Unavailable,
+};
+
+struct ServiceInfo {
+  string name;
+  string interface_name;
+  uint32 version;
+  uint64 generation;
+  string provider;
+};
+
+enum ServiceChangeKind { Added, Removed };
+enum WatchStatus { Updates, ResyncRequired, Closed, Busy };
+
+struct ServiceChange {
+  ServiceChangeKind kind;
+  ServiceInfo service;
+  uint64 revision;
+};
+
+interface ServiceWatch {
+  Next() => (WatchStatus status, uint64 revision, array<ServiceChange> changes);
+};
+
+// One factory publishes one exact service/interface/version combination.
+interface ServiceFactory {
+  Bind(handle<message_pipe> receiver);
+};
+
+interface HealthProbe {
+  Check() => (bool healthy);
+};
+
+// Identity and access policy are supplied by the host, never by these messages.
+interface Directory {
+  Register(string name, string interface_name, uint32 version,
+           pending_remote<ServiceFactory> factory)
+      => (Status status, uint64 generation);
+  List() => (array<ServiceInfo> services);
+  Connect(string name, string interface_name, uint32 version,
+          handle<message_pipe> receiver) => (Status status, uint64 generation);
+  Unregister(string name, string interface_name, uint64 generation)
+      => (Status status);
+  Watch(uint32 capacity, pending_receiver<ServiceWatch> receiver)
+      => (Status status, array<ServiceInfo> snapshot);
+  SetHealthProbe(pending_remote<HealthProbe> probe) => (Status status);
+};

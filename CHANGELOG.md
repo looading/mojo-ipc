@@ -3,6 +3,65 @@
 All version changes are maintained here, with the newest version first.
 The README contains project setup and usage instructions and links to this file.
 
+## Unreleased
+
+- Add opt-in `HealthPolicy` and session-owned `HealthProbe` registration with
+  a retained `HealthBinding`. Require timely probe registration for monitored
+  readiness, then publish health events and per-attempt counters from host polls.
+- Bound probes to one raw request per endpoint, stamp reply receive times and
+  preserve deadlines/failure history across endpoint replacement. Threshold
+  failures close admission, allow shutdown grace, reap the old process and use
+  the existing finite restart budget/backoff without replaying business calls.
+- Add deterministic health state tests and native periodic/transient/unhealthy,
+  endpoint replacement, missing-probe, delayed-poll and hung-process recovery
+  checks, including service subscription changes. Append the optional control
+  protocol while preserving existing ordinals and native ABI.
+
+- Add authorized dynamic discovery with an atomic initial snapshot and bounded
+  ServiceWatch long polls. Emit Added/Removed events with per-subscription
+  revisions; hidden services do not affect those revisions. Cap queues at 256
+  events and require explicit resubscription after overflow.
+- Add ServiceSubscription borrowing Future and host timeout wait, reusing one
+  pending Next across abandoned/timed-out waits. Guard replacement/disconnect
+  cleanup by token and release replies/endpoints outside registry locks. Append
+  Watch to the control protocol; new-feature peers require matching definitions.
+- Use snapshot/change-driven discovery in the three-process consumer and add
+  native subscription tests for filtering, timeout reuse, async wake/drop,
+  overflow/resync, replacement, session revocation and overlapping raw Next.
+
+- Add optional runtime-independent `CallClient`, shared deadline `CallContext`,
+  `Call` Future/host wait, weak cross-thread cancellation and responder bridges.
+  Resolve local results exactly once, clean local tracking before publication,
+  and fail pending calls on client drop/context shutdown without request replay.
+- Bound both local pending calls and original binding response slots. Timeout
+  and cancellation do not retract remote execution; cancelled slots continue
+  consuming capacity until reply/disconnect. Preserve normal late-response and
+  returned-handle validation without modifying generated SDK methods or bindings.
+- Use bounded calls in the three-process consumer and add native held-response
+  tests for timeouts, cancellation, capacity recovery, disconnect/shutdown and
+  late-returned handle release. Extend the private fixture protocol with CallProbe
+  and a response-bearing Crash; the SDK/native ABI remains unchanged.
+
+- Add reusable host-driven `ProcessSupervisor` with startup registration
+  readiness, fixed-backoff Never/OnFailure/Always restart policies, finite
+  lifetime retry budgets, lifecycle events/snapshots and graceful/forced stop.
+  Own and reap direct child handles before replacement. Provide opt-in managed
+  participant bootstrap and parent-death helpers without changing the native ABI.
+- Make readiness atomic and session-specific with manager registration
+  timestamps, preserving on-time readiness across delayed polls while rejecting
+  late registration. Reject duplicate required keys and missing publish grants.
+- Replace the example's manual restart branch with the supervisor; add native
+  failure-path checks for crash loops, pending-retry cancellation, startup and
+  control-loss timeouts, uncooperative children and normal successful exits.
+
+- Add experimental `mojo-service` above the existing IPC SDK: host-assigned
+  identity, default-deny publish/connect policies, registration/discovery,
+  exact interface version checks, generation-checked cleanup and business
+  endpoint transfer. Existing SDK APIs and native ABI remain unchanged.
+- Add a real manager/provider/consumer fixture with authorization checks,
+  provider crash/restart, explicit consumer rebinding and bounded subprocess
+  cleanup. Native execution is opt-in and part of the native CI gates.
+
 ## 0.2.2 (2026-10-21)
 
 This release adds native library build and distribution automation. The Rust

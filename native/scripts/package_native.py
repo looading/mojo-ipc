@@ -30,6 +30,7 @@ TARGETS = {
 GATES = (
     "cargo_check_passed", "cargo_tests_passed", "official_mojom_boundary_tests_passed",
     "native_smoke_passed", "independent_named_process_fixture_passed", "typed_parent_child_example_passed",
+    "service_network_passed",
 )
 
 

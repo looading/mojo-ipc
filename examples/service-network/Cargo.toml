@@ -1,0 +1,17 @@
+[package]
+name = "mojo-service-network"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+mojo-ipc.workspace = true
+mojo-service.workspace = true
+
+[build-dependencies]
+mojom-build.workspace = true
+
+[[bin]]
+name = "service-network"
+path = "src/main.rs"

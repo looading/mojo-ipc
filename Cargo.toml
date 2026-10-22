@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "examples/protocol", "benchmarks/ipc", "xtask"]
+members = ["crates/*", "examples/protocol", "examples/service-network", "benchmarks/ipc", "xtask"]
 
 [workspace.package]
 version = "0.2.2"
@@ -35,5 +35,6 @@ mojom_value_parser = { package = "mojom-codec", path = "crates/mojom-codec", ver
 bindings = { package = "mojo-bindings", path = "crates/mojo-bindings", version = "=0.2.2" }
 sequenced_task_runner = { package = "mojo-sequence", path = "crates/mojo-sequence", version = "=0.2.2" }
 mojo-ipc = { path = "crates/mojo-ipc", version = "=0.2.2" }
+mojo-service = { path = "crates/mojo-service", version = "=0.2.2" }
 mojom-build = { path = "crates/mojom-build", version = "=0.2.2" }
 
