@@ -39,8 +39,8 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def version() -> str:
-    value = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
+def version(sdk_root: Path = ROOT) -> str:
+    value = tomllib.loads((sdk_root / "Cargo.toml").read_text(encoding="utf-8"))["workspace"]["package"]["version"]
     if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", value):
         raise RuntimeError(f"unsupported workspace version: {value!r}")
     return value
@@ -76,7 +76,12 @@ def audit_output(target: str, output: str) -> dict:
         if output.splitlines()[0].strip() != architecture:
             raise RuntimeError(f"expected a single-architecture {architecture} Mach-O library")
         dependencies = re.findall(r"^\s+(\S+) \(compatibility version", output, re.M)
-        dependencies = [d for d in dependencies if d != "@rpath/" + library]
+        # otool -L includes LC_ID_DYLIB before the actual imports. Chromium's
+        # noncomponent build uses ./, while component-style builds use @rpath/.
+        self_ids = {"@rpath/" + library, "./" + library}
+        if not dependencies or dependencies[0] not in self_ids:
+            raise RuntimeError(f"unexpected macOS install ID: {dependencies[:1]}")
+        dependencies = dependencies[1:]
         if not dependencies or any(not d.startswith(("/usr/lib/", "/System/Library/")) for d in dependencies):
             raise RuntimeError(f"unexpected macOS dependencies: {dependencies}")
         exports = set(re.findall(r"^[0-9a-fA-F]+\s+[A-Z]\s+_(\S+)$", output, re.M))
@@ -151,9 +156,11 @@ def validate_receipts(target: str, native: dict, acceptance: dict, library: byte
             raise RuntimeError("acceptance belongs to another workflow attempt")
 
 
-def create_package(artifact: Path, target: str, chromium: Path, out: Path, destination: Path, *, chromium_commit: str = COMMIT) -> Path:
+def create_package(artifact: Path, target: str, chromium: Path, out: Path, destination: Path,
+                   *, sdk_root: Path = ROOT, chromium_commit: str = COMMIT) -> Path:
+    sdk_root = sdk_root.resolve()
     revision(chromium_commit)
-    sdk_commit = os.environ.get("GITHUB_SHA") or inspect(["git", "-C", str(ROOT), "rev-parse", "HEAD"]).strip()
+    sdk_commit = os.environ.get("GITHUB_SHA") or inspect(["git", "-C", str(sdk_root), "rev-parse", "HEAD"]).strip()
     if inspect(["git", "-C", str(chromium), "rev-parse", "HEAD"]).strip() != chromium_commit:
         raise RuntimeError("license checkout does not match Chromium pin")
     filename = TARGETS[target][2]
@@ -165,7 +172,7 @@ def create_package(artifact: Path, target: str, chromium: Path, out: Path, desti
     native = json.loads((artifact / "native-manifest.json").read_bytes())
     acceptance = json.loads((artifact / "acceptance-manifest.json").read_bytes())
     validate_receipts(target, native, acceptance, (artifact / filename).read_bytes(), sdk_commit, chromium_commit=chromium_commit)
-    if (artifact / "mojo_rs_native.h").read_bytes() != (ROOT / "native/include/mojo_rs_native.h").read_bytes():
+    if (artifact / "mojo_rs_native.h").read_bytes() != (sdk_root / "native/include/mojo_rs_native.h").read_bytes():
         raise RuntimeError("artifact C header does not match this SDK checkout")
     audit, raw = audit_library(target, artifact / filename)
     notices = artifact / "THIRD_PARTY_NOTICES.txt"
@@ -183,14 +190,14 @@ def create_package(artifact: Path, target: str, chromium: Path, out: Path, desti
     for name, value in (("native-manifest.json", native), ("acceptance-manifest.json", acceptance),
                         ("dependency-audit.json", audit)):
         payload[name] = (json.dumps(value, indent=2) + "\n").encode()
-    payload.update({"dependency-audit.txt": raw.encode(), "LICENSE": (ROOT / "LICENSE").read_bytes(),
+    payload.update({"dependency-audit.txt": raw.encode(), "LICENSE": (sdk_root / "LICENSE").read_bytes(),
                     "CHROMIUM_LICENSE": (chromium / "LICENSE").read_bytes(),
                     "THIRD_PARTY_NOTICES.txt": notices.read_bytes()})
-    metadata = {"sdk_version": version(), "sdk_commit": sdk_commit, "target": target,
+    metadata = {"sdk_version": version(sdk_root), "sdk_commit": sdk_commit, "target": target,
                 "chromium_commit": chromium_commit, "abi_version": 1,
                 "files": {name: digest(data) for name, data in payload.items()}}
     payload["package-manifest.json"] = (json.dumps(metadata, indent=2) + "\n").encode()
-    stem = f"mojo-native-{version()}-{target}"
+    stem = f"mojo-native-{version(sdk_root)}-{target}"
     destination.mkdir(parents=True, exist_ok=True)
     archive = destination / (stem + ".tar.gz")
     with tarfile.open(archive, "w:gz") as stream:
@@ -210,9 +217,12 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--target", choices=TARGETS, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--sdk-root", type=Path, default=ROOT,
+                        help="validated SDK source checkout (defaults to this script's checkout)")
     args = parser.parse_args()
     print(create_package(args.artifact_dir.resolve(), args.target, args.chromium_src.resolve(),
-                         args.out.resolve(), args.output_dir.resolve(), chromium_commit=args.chromium_revision))
+                         args.out.resolve(), args.output_dir.resolve(), sdk_root=args.sdk_root,
+                         chromium_commit=args.chromium_revision))
     return 0
 
 

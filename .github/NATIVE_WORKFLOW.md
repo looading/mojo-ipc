@@ -59,14 +59,34 @@ gh workflow run native.yml --ref main -f release_tag=v0.2.2 -f publish=true
 
 Preflight checks the SDK tag's Cargo version and resolves its source commit.
 Every producer checks out that commit. Acceptance records preserve both the SDK
-commit and the separate workflow commit/ref. Before publication the tag is
+commit and the separate workflow commit/ref. Release tooling is checked out
+separately at the workflow commit and tested during preflight. The packager's
+`--sdk-root` keeps its version, C header and license tied to the validated SDK
+checkout, allowing packaging fixes without modifying the SDK tag. Before publication the tag is
 resolved again; a moved tag stops publication. A branch dispatch without an
 explicit matching tag cannot publish. This mode does not move existing tags.
+
+If all four packages were uploaded but publication failed, reuse that completed
+native workflow run by setting `artifact_run_id` as well:
+
+```sh
+gh workflow run native.yml --ref main -f release_tag=v0.2.2 -f publish=true -f artifact_run_id=39604598542
+```
+
+This runs version/tooling preflight and publication, skipping the native matrix.
+It only accepts packages from this repository's native workflow, triggered by
+push or manual dispatch. The producer must be complete; a failed publishing
+step is allowed. Receipts must match its run ID, workflow commit and attempt,
+as well as the SDK tag, full target set, file hashes and acceptance gates.
 
 The publishing job verifies the complete target set, every archive checksum,
 all packaged member hashes, and acceptance provenance. It uploads four archives
 and `SHA256SUMS` to a draft Release, checks the server's asset hashes, then
-publishes. An interrupted upload leaves a draft that can be retried. Existing
+publishes. Drafts are found through the authenticated release list and verified
+and published by numeric release ID: GitHub's
+[tag lookup only returns published releases](https://docs.github.com/en/rest/releases/releases#get-a-release-by-tag-name).
+An interrupted upload leaves a draft that can be retried. Existing matching
+uploads are reused after their server hashes are verified. Existing
 published assets are never replaced with different bytes. A prerelease Cargo
 version produces a prerelease on GitHub.
 
@@ -102,7 +122,10 @@ without remote execution. The workflow copies the pinned GN and Ninja binaries
 to an ephemeral tool directory at the front of `PATH`. For compatibility with
 older SDK builders, the Ninja executable has an `autoninja` alias. This avoids
 depot_tools' uninitialized Python launchers while preserving depot_tools for
-other build actions. Linux also uses `use_glib=false` to avoid requiring
+other build actions. Before native smoke execution, the workflow adds the build
+directory to `LD_LIBRARY_PATH` on Linux or `DYLD_LIBRARY_PATH` on macOS, preserving
+existing entries. The smoke executables can then load the adjacent shared library
+without depending on a component-build RPATH. Linux also uses `use_glib=false` to avoid requiring
 GLib/GObject in consumer hosts. The cold source/toolchain checkout is still large.
 Provisioning reports available disk space and requires at least 25 GiB free
 after cleanup; every native job has the GitHub-hosted six-hour timeout. There is

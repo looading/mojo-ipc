@@ -13,6 +13,10 @@ on:
         description: Existing version tag to build with this workflow (for example v0.2.2)
         type: string
         default: ''
+      artifact_run_id:
+        description: Reuse all four verified packages from this completed native workflow run
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -35,6 +39,12 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ inputs.release_tag || github.ref }}
+      - name: Check out the workflow's release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .release-tools
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -43,9 +53,11 @@ jobs:
         env:
           PUBLISH_REQUESTED: ${{ inputs.publish || false }}
           REQUESTED_TAG: ${{ inputs.release_tag }}
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
         shell: python
         run: |
           import os
+          import re
           import subprocess
           import sys
           sys.path.insert(0, "native/scripts")
@@ -58,14 +70,18 @@ jobs:
           publish = os.environ["PUBLISH_REQUESTED"] == "true" or (os.environ["GITHUB_EVENT_NAME"] == "push" and bool(tag))
           if publish and not tag:
               raise SystemExit("publish requires an explicit matching version tag")
+          producer = os.environ["ARTIFACT_RUN_ID"]
+          if producer and (not re.fullmatch(r"[0-9]+", producer) or not publish):
+              raise SystemExit("artifact reuse requires a numeric native run ID and publish=true")
           commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
               stream.write(f"version={value}\ncommit={commit}\ntag={tag}\npublish={str(publish).lower()}\n")
       - name: Test native release tooling without Chromium
-        run: python -B -m unittest discover -s native/scripts -p 'test_release.py' -v
+        run: python -B -m unittest discover -s .release-tools/native/scripts -p 'test_release.py' -v
 
   native:
     name: Native ${{ matrix.target }}
+    if: ${{ !inputs.artifact_run_id }}
     needs: version
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
@@ -119,6 +135,12 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.version.outputs.commit }}
+      - name: Check out the workflow's release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .release-tools
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -224,7 +246,7 @@ jobs:
               "Linux": ("linux64", "gn"), "Darwin": ("mac", "gn"), "Windows": ("win", "gn.exe"),
           }[os.environ["NATIVE_EXPECTED_SYSTEM"]]
           env = dict(os.environ, MOJO_TEST_GN=str(Path(os.environ["CHROMIUM_SRC"]) / "buildtools" / subdir / executable))
-          subprocess.run([sys.executable, "-B", "native/scripts/test_release.py",
+          subprocess.run([sys.executable, "-B", ".release-tools/native/scripts/test_release.py",
                           "HostedTests.test_license_scan_preserves_standalone_graph_root", "-v"], env=env, check=True)
 
       - name: Use pinned GN and Ninja without depot_tools Python launchers
@@ -250,6 +272,16 @@ jobs:
               shutil.copy2(original, tools / name)
           with open(os.environ["GITHUB_PATH"], "a", encoding="utf-8") as stream:
               stream.write(str(tools) + "\n")
+
+      - name: Set the native smoke runtime search path
+        if: runner.os != 'Windows'
+        run: |
+          import os
+          variable = {"Linux": "LD_LIBRARY_PATH", "Darwin": "DYLD_LIBRARY_PATH"}[os.environ["NATIVE_EXPECTED_SYSTEM"]]
+          paths = [os.environ["MOJO_NATIVE_BUILD_DIR"]]
+          paths.extend(path for path in os.environ.get(variable, "").split(os.pathsep) if path)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"{variable}={os.pathsep.join(paths)}\n")
 
       - name: Build the native library and run native smoke
         run: |
@@ -378,7 +410,8 @@ jobs:
           import subprocess
           import sys
           subprocess.run([
-              sys.executable, "native/scripts/package_native.py",
+              sys.executable, ".release-tools/native/scripts/package_native.py",
+              "--sdk-root", str(Path.cwd()),
               "--artifact-dir", os.environ["MOJO_NATIVE_ARTIFACT_DIR"],
               "--chromium-src", os.environ["CHROMIUM_SRC"],
               "--out", os.environ["MOJO_NATIVE_BUILD_DIR"],
@@ -410,20 +443,53 @@ jobs:
   release:
     name: Publish the complete native release
     needs: [version, native]
-    if: needs.version.outputs.publish == 'true'
+    if: >-
+      always() && !cancelled() && needs.version.result == 'success' && needs.version.outputs.publish == 'true' &&
+      (needs.native.result == 'success' || (inputs.artifact_run_id != '' && needs.native.result == 'skipped'))
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           ref: ${{ needs.version.outputs.commit }}
+      - name: Check out the workflow's release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .release-tools
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Validate the native package producer
+        id: producer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCER_RUN_ID: ${{ inputs.artifact_run_id || github.run_id }}
+          REUSED_RUN_ID: ${{ inputs.artifact_run_id }}
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+          import sys
+          sys.path.insert(0, ".release-tools/native/scripts")
+          from release_native import validate_producer
+          repository = os.environ["GITHUB_REPOSITORY"]
+          run_id = os.environ["PRODUCER_RUN_ID"]
+          run = json.loads(subprocess.check_output([
+              "gh", "api", f"repos/{repository}/actions/runs/{run_id}",
+          ], text=True))
+          commit, attempt = validate_producer(run, repository, run_id, completed=bool(os.environ["REUSED_RUN_ID"]))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+              stream.write(f"commit={commit}\nattempt={attempt}\n")
       - uses: actions/download-artifact@v4
         with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id || github.run_id }}
           pattern: mojo-native-package-*
           path: dist/release
           merge-multiple: true
@@ -432,9 +498,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SDK_COMMIT: ${{ needs.version.outputs.commit }}
           RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          PRODUCER_RUN_ID: ${{ inputs.artifact_run_id || github.run_id }}
+          PRODUCER_COMMIT: ${{ steps.producer.outputs.commit }}
+          PRODUCER_ATTEMPT: ${{ steps.producer.outputs.attempt }}
         shell: python
         run: |
           import os
+          from pathlib import Path
           import subprocess
           import sys
           tag = os.environ["RELEASE_TAG"]
@@ -447,6 +517,9 @@ jobs:
               raise SystemExit("release tag moved after source validation; refusing to publish")
           # The publishing script runs against the validated SDK tag checkout.
           # Its provenance is separate from a manually selected workflow ref.
-          env = dict(os.environ, GITHUB_SHA=commit, GITHUB_REF="refs/tags/" + tag)
-          subprocess.run([sys.executable, "native/scripts/release_native.py",
+          env = dict(os.environ, GITHUB_SHA=commit, GITHUB_REF="refs/tags/" + tag,
+                     GITHUB_RUN_ID=os.environ["PRODUCER_RUN_ID"],
+                     GITHUB_RUN_ATTEMPT=os.environ["PRODUCER_ATTEMPT"])
+          subprocess.run([sys.executable, ".release-tools/native/scripts/release_native.py",
+                          "--sdk-root", str(Path.cwd()), "--workflow-commit", os.environ["PRODUCER_COMMIT"],
                           "--package-dir", "dist/release", "--tag", tag], env=env, check=True)
