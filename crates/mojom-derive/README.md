@@ -4,7 +4,7 @@ An unofficial component of the [mojo-ipc SDK](https://github.com/looading/mojo-i
 
 Provides derive macros that connect Rust data types to the pinned Mojom codec.
 
-This component is part of SDK `0.2.1`.
+This component is part of SDK `0.3.0`.
 Keep the SDK component versions aligned when upgrading.
 
 Upstream Chromium is pinned to `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`.

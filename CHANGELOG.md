@@ -5,11 +5,17 @@ The README contains project setup and usage instructions and links to this file.
 
 ## Unreleased
 
+## 0.3.0 (2026-10-22)
+
+This release adds experimental local application services and explicit Chromium
+runtime configuration. The default Chromium revision and native C ABI v1 remain
+unchanged. New service control features require matching peer definitions.
+Cargo crate publication remains separate from this GitHub native release.
+
 - Add explicit `RuntimeConfig` and custom Chromium revision selection to native
   build, Windows toolchain and packaging commands. Preserve the official default,
   strict C ABI/layout checks, and path/role/revision identity after initialization.
   Custom native builds do not change the generated bindings' source provenance.
-
 
 - Add opt-in `HealthPolicy` and session-owned `HealthProbe` registration with
   a retained `HealthBinding`. Require timely probe registration for monitored
@@ -67,6 +73,10 @@ The README contains project setup and usage instructions and links to this file.
 - Add a real manager/provider/consumer fixture with authorization checks,
   provider crash/restart, explicit consumer rebinding and bounded subprocess
   cleanup. Native execution is opt-in and part of the native CI gates.
+
+- Select Rust 1.96.0 explicitly for Windows cross-linking, avoiding automatic
+  rustfmt installation on hosted runners. Preserve exact source license bytes
+  in packaging tests across Windows and Unix line endings.
 
 ## 0.2.2 (2026-10-21)
 

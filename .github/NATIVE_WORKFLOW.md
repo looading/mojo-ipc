@@ -33,11 +33,11 @@ an explicitly selected matching version tag. The workflow uses its built-in `GIT
 the publishing job receives `contents: write`.
 
 For example, after preparing the SDK source and its internal Cargo versions for
-the next release at `0.2.2`:
+the next release at `0.3.0`:
 
 ```sh
-git tag v0.2.2
-git push origin v0.2.2
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 Existing `v0.2.0` and `v0.2.1` tags predate this workflow. Use a new version/tag
@@ -47,7 +47,7 @@ publication is separate from native Release publication.
 A manual dispatch on a matching version tag can also publish:
 
 ```sh
-gh workflow run native.yml --ref v0.2.2 -f publish=true
+gh workflow run native.yml --ref v0.3.0 -f publish=true
 ```
 
 To rebuild an existing SDK tag with a corrected workflow from `main`, select
@@ -173,7 +173,7 @@ https://github.com/looading/mojo-ipc/releases/download/v<version>/SHA256SUMS
 For example, for a released macOS arm64 version:
 
 ```sh
-version=0.2.2
+version=0.3.0
 target=aarch64-apple-darwin
 asset="mojo-native-$version-$target.tar.gz"
 base="https://github.com/looading/mojo-ipc/releases/download/v$version"

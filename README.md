@@ -5,7 +5,7 @@ SDK 提供类型化 Mojom 接口、消息管道、共享缓冲区和进程连接
 在此之上提供应用进程监管、服务发现与故障恢复。
 
 本项目由社区维护，与 Google 或 Chromium 官方发布无关。
-当前源码版本为 `0.2.2`，固定 Chromium revision 为
+当前源码版本为 `0.3.0`，固定 Chromium revision 为
 `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`，原生 ABI 为 1。
 未发布改动与历史版本见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -173,7 +173,7 @@ let receiver = pending_receiver.bind_with_options(
 | Windows x86_64 MSVC | Core DLL 交叉构建及 PE 检查，历史 Rust workspace 编译和链接 | Windows 原生运行及服务网络验收 |
 | Linux x86_64 GNU | 历史 Rust 编译检查 | 原生运行及服务网络验收 |
 
-最新普通工作区测试为 **144 项通过**；另在 macOS arm64 执行的 **7 项服务网络原生测试通过**。
+最新普通工作区测试为 **146 项通过**；另在 macOS arm64 执行的 **7 项服务网络原生测试通过**。
 原生工作流已纳入服务网络验收门禁，本轮未执行远端 CI。各轮证据、平台限制及未执行项
 统一记录在 [VALIDATION.md](VALIDATION.md)。
 

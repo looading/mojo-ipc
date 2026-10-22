@@ -13,5 +13,5 @@ readme = "README.md"
 chromium-revision = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
 
 [dependencies]
-mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core", version = "=0.2.2" }
-parsing_attribute = { package = "mojom-derive", path = "../mojom-derive", version = "=0.2.2" }
+mojom_value_parser_core = { package = "mojom-codec-core", path = "../mojom-codec-core", version = "=0.3.0" }
+parsing_attribute = { package = "mojom-derive", path = "../mojom-derive", version = "=0.3.0" }
