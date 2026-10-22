@@ -266,3 +266,7 @@ python3 benchmarks/run.py --stress-seconds 60 \
 
 官方 Rust 源码保留原版权信息与 BSD 许可证。Python 工具及第三方依赖保留各自许可证，
 见 [`UPSTREAM.json`](crates/mojom-build/vendor/UPSTREAM.json) 及相邻 LICENSE 文件。
+
+### 自定义 Chromium 来源
+
+SDK 默认使用上述官方 Chromium 提交。用户可用自己的 Git checkout，通过原生构建器的 `--chromium-src`、`--chromium-revision` 选择源码；加载时通过 `Runtime::load_with_config` 明确传入同一提交。默认 `Runtime::load` 的官方版本检查保留，ABI 和布局兼容性仍需审核。详见 [原生构建参数](native/README.md#custom-source)和 [Rust 加载配置](crates/mojo-ipc/README.md#custom-chromium-checkout)。

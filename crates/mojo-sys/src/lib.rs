@@ -21,6 +21,36 @@ use std::{
 pub const CHROMIUM_COMMIT: &str = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd";
 pub const SDK_ABI_VERSION: u32 = 1;
 
+/// 原生库的来源约束；默认使用 SDK 的官方 Chromium 提交。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RuntimeConfig<'a> {
+    pub chromium_commit: &'a str,
+}
+
+impl Default for RuntimeConfig<'_> {
+    fn default() -> Self {
+        Self {
+            chromium_commit: CHROMIUM_COMMIT,
+        }
+    }
+}
+
+impl RuntimeConfig<'_> {
+    fn validate(self) -> Result<(), InitError> {
+        if self.chromium_commit.len() != 40
+            || !self
+                .chromium_commit
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return Err(InitError(
+                "expected Chromium commit must be 40 lowercase hexadecimal characters".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct InitError(pub String);
 impl fmt::Display for InitError {
@@ -35,6 +65,7 @@ struct NativeRuntime {
     thunks: &'static MojoSystemThunks2,
     path: PathBuf,
     broker: bool,
+    chromium_commit: String,
 }
 // SAFETY: The API table is immutable, its native image is never unloaded, and
 // both the official C System API and runner-reference operations are thread-safe.
@@ -50,6 +81,22 @@ static LOAD_LOCK: Mutex<()> = Mutex::new(());
 /// revision and ABI. Loading native code and trusting its pointers cannot be
 /// made safe by a version string alone. The image is retained until exit.
 pub unsafe fn initialize(path: &Path, broker: bool) -> Result<(), InitError> {
+    // SAFETY: 调用者承担与原入口相同的原生库来源及 ABI 信任责任。
+    unsafe { initialize_with_config(path, broker, RuntimeConfig::default()) }
+}
+
+/// 加载与显式 Chromium 提交匹配的原生库，仍检查完整 ABI 和系统函数表。
+///
+/// # Safety
+/// `path` 必须是由调用者信任且审核过的原生库，其 C ABI、Mojo 类型和
+/// thunk 布局必须与本 SDK 一致。提交字符串不能替代二进制来源和兼容性审核。
+/// 原生库在进程退出前不会卸载。
+pub unsafe fn initialize_with_config(
+    path: &Path,
+    broker: bool,
+    config: RuntimeConfig<'_>,
+) -> Result<(), InitError> {
+    config.validate()?;
     let path = path
         .canonicalize()
         .map_err(|e| InitError(format!("{}: {e}", path.display())))?;
@@ -57,11 +104,14 @@ pub unsafe fn initialize(path: &Path, broker: bool) -> Result<(), InitError> {
         .lock()
         .map_err(|_| InitError("native initialization lock poisoned".into()))?;
     if let Some(runtime) = RUNTIME.get() {
-        return if runtime.path == path && runtime.broker == broker {
+        return if runtime.path == path
+            && runtime.broker == broker
+            && runtime.chromium_commit == config.chromium_commit
+        {
             Ok(())
         } else {
             Err(InitError(
-                "this process already initialized a different runtime or node role".into(),
+                "this process already initialized a different runtime, node role or Chromium revision".into(),
             ))
         };
     }
@@ -86,7 +136,8 @@ pub unsafe fn initialize(path: &Path, broker: bool) -> Result<(), InitError> {
         return Err(InitError("native API size/version mismatch".into()));
     }
     if api.chromium_commit.is_null()
-        || unsafe { CStr::from_ptr(api.chromium_commit) }.to_bytes() != CHROMIUM_COMMIT.as_bytes()
+        || unsafe { CStr::from_ptr(api.chromium_commit) }.to_bytes()
+            != config.chromium_commit.as_bytes()
     {
         return Err(InitError("native Chromium revision mismatch".into()));
     }
@@ -142,6 +193,7 @@ pub unsafe fn initialize(path: &Path, broker: bool) -> Result<(), InitError> {
             thunks,
             path,
             broker,
+            chromium_commit: config.chromium_commit.to_owned(),
         })
         .map_err(|_| InitError("runtime initialized concurrently".into()))?;
     Ok(())
@@ -164,4 +216,40 @@ fn system_thunks() -> &'static MojoSystemThunks2 {
         .get()
         .expect("initialize a Mojo Runtime before using handles")
         .thunks
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_runtime_config_keeps_the_official_chromium_pin() {
+        assert_eq!(RuntimeConfig::default().chromium_commit, CHROMIUM_COMMIT);
+        assert!(RuntimeConfig::default().validate().is_ok());
+    }
+
+    #[test]
+    fn custom_runtime_config_requires_an_exact_commit() {
+        let custom = RuntimeConfig {
+            chromium_commit: "6d2bf4f33d77670349c45ffa1464bef101c0eda5",
+        };
+        assert!(custom.validate().is_ok());
+        for invalid in [
+            "",
+            "main",
+            "6d2bf4f",
+            " bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd",
+            "BCBC09A9F8E4C3FD3AD2ED9CBAD41E63C35CCFDD",
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        ] {
+            assert!(
+                RuntimeConfig {
+                    chromium_commit: invalid
+                }
+                .validate()
+                .is_err(),
+                "{invalid}"
+            );
+        }
+    }
 }

@@ -18,6 +18,7 @@ import tarfile
 import tomllib
 
 from build_native import COMMIT, LABEL
+from chromium_source import add_revision_argument, revision
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -126,9 +127,10 @@ def audit_library(target: str, library: Path) -> tuple[dict, str]:
 
 
 def validate_receipts(target: str, native: dict, acceptance: dict, library: bytes, sdk_commit: str,
-                      *, allow_previous_attempts: bool = False) -> None:
+                      *, allow_previous_attempts: bool = False, chromium_commit: str = COMMIT) -> None:
+    revision(chromium_commit)
     os_name, cpu, filename = TARGETS[target]
-    for key, value in {"chromium_commit": COMMIT, "abi_version": 1, "os": os_name,
+    for key, value in {"chromium_commit": chromium_commit, "abi_version": 1, "os": os_name,
                        "cpu": cpu, "library": filename, "native_smoke_passed": True,
                        "sha256": digest(library)}.items():
         if native.get(key) != value:
@@ -149,9 +151,10 @@ def validate_receipts(target: str, native: dict, acceptance: dict, library: byte
             raise RuntimeError("acceptance belongs to another workflow attempt")
 
 
-def create_package(artifact: Path, target: str, chromium: Path, out: Path, destination: Path) -> Path:
+def create_package(artifact: Path, target: str, chromium: Path, out: Path, destination: Path, *, chromium_commit: str = COMMIT) -> Path:
+    revision(chromium_commit)
     sdk_commit = os.environ.get("GITHUB_SHA") or inspect(["git", "-C", str(ROOT), "rev-parse", "HEAD"]).strip()
-    if inspect(["git", "-C", str(chromium), "rev-parse", "HEAD"]).strip() != COMMIT:
+    if inspect(["git", "-C", str(chromium), "rev-parse", "HEAD"]).strip() != chromium_commit:
         raise RuntimeError("license checkout does not match Chromium pin")
     filename = TARGETS[target][2]
     required = [filename, "mojo_rs_native.h", "native-manifest.json", "acceptance-manifest.json"]
@@ -161,7 +164,7 @@ def create_package(artifact: Path, target: str, chromium: Path, out: Path, desti
             raise RuntimeError(f"missing regular artifact file: {name}")
     native = json.loads((artifact / "native-manifest.json").read_bytes())
     acceptance = json.loads((artifact / "acceptance-manifest.json").read_bytes())
-    validate_receipts(target, native, acceptance, (artifact / filename).read_bytes(), sdk_commit)
+    validate_receipts(target, native, acceptance, (artifact / filename).read_bytes(), sdk_commit, chromium_commit=chromium_commit)
     if (artifact / "mojo_rs_native.h").read_bytes() != (ROOT / "native/include/mojo_rs_native.h").read_bytes():
         raise RuntimeError("artifact C header does not match this SDK checkout")
     audit, raw = audit_library(target, artifact / filename)
@@ -184,7 +187,7 @@ def create_package(artifact: Path, target: str, chromium: Path, out: Path, desti
                     "CHROMIUM_LICENSE": (chromium / "LICENSE").read_bytes(),
                     "THIRD_PARTY_NOTICES.txt": notices.read_bytes()})
     metadata = {"sdk_version": version(), "sdk_commit": sdk_commit, "target": target,
-                "chromium_commit": COMMIT, "abi_version": 1,
+                "chromium_commit": chromium_commit, "abi_version": 1,
                 "files": {name: digest(data) for name, data in payload.items()}}
     payload["package-manifest.json"] = (json.dumps(metadata, indent=2) + "\n").encode()
     stem = f"mojo-native-{version()}-{target}"
@@ -203,12 +206,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact-dir", type=Path, required=True)
     parser.add_argument("--chromium-src", type=Path, required=True)
+    add_revision_argument(parser)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--target", choices=TARGETS, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     print(create_package(args.artifact_dir.resolve(), args.target, args.chromium_src.resolve(),
-                         args.out.resolve(), args.output_dir.resolve()))
+                         args.out.resolve(), args.output_dir.resolve(), chromium_commit=args.chromium_revision))
     return 0
 
 

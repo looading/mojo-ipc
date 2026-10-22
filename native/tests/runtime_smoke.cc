@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -267,6 +268,10 @@ bool TaskSmoke() {
 }  // namespace
 
 int main(int argc, char** argv) {
+  if (argc < 1 || argv == nullptr) {
+    return 1;
+  }
+  const std::span<char*> arguments(argv, static_cast<size_t>(argc));
   if (!Check(MojoRsGetApiV1(1, sizeof(api), &api) == MOJO_RESULT_OK, "get API") ||
       !Check(api.abi_version == 1 && api.struct_size == sizeof(api), "API layout") ||
       !Check(MojoRsGetApiV1(2, sizeof(api), &api) == MOJO_RESULT_INVALID_ARGUMENT,
@@ -277,17 +282,17 @@ int main(int argc, char** argv) {
   std::string named_server;
   std::string named_client;
   std::string peer_pid_file;
-  for (int i = 1; i < argc; ++i) {
+  for (size_t i = 1; i < arguments.size(); ++i) {
     constexpr std::string_view prefix = "--mojo-rust-sdk-bootstrap=";
-    std::string_view arg(argv[i]);
+    std::string_view arg(arguments[i]);
     if (arg.starts_with(prefix)) {
       token = arg.substr(prefix.size());
-    } else if (arg == "--named-server" && i + 1 < argc) {
-      named_server = argv[++i];
-    } else if (arg == "--named-client" && i + 1 < argc) {
-      named_client = argv[++i];
-    } else if (arg == "--peer-pid-file" && i + 1 < argc) {
-      peer_pid_file = argv[++i];
+    } else if (arg == "--named-server" && i + 1 < arguments.size()) {
+      named_server = arguments[++i];
+    } else if (arg == "--named-client" && i + 1 < arguments.size()) {
+      named_client = arguments[++i];
+    } else if (arg == "--peer-pid-file" && i + 1 < arguments.size()) {
+      peer_pid_file = arguments[++i];
     }
   }
   if (!named_client.empty()) {
@@ -353,7 +358,7 @@ int main(int argc, char** argv) {
       !Check(api.next_trace_id() != api.next_trace_id(), "unique trace IDs")) {
     return 1;
   }
-  MojoRsSpawnOptions spawn{sizeof(spawn), argv[0], nullptr, 0};
+  MojoRsSpawnOptions spawn{sizeof(spawn), arguments.front(), nullptr, 0};
   MojoRsHandle bootstrap = 0;
   MojoRsChild* child = nullptr;
   if (!Check(api.spawn_child(&spawn, &bootstrap, &child) == MOJO_RESULT_OK,

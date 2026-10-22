@@ -7,7 +7,7 @@ pub use bindings;
 pub use bindings::receiver::{PendingReceiver, Receiver};
 pub use bindings::register_mojom_state_object_impls;
 pub use bindings::remote::{PendingRemote, Remote};
-pub use raw_ffi::InitError;
+pub use raw_ffi::{InitError, RuntimeConfig};
 pub use sequenced_task_runner::SequencedTaskRunnerHandle;
 use std::{ffi::CString, ptr::NonNull, time::Duration};
 pub use system::{self, message_pipe::MessageEndpoint};
@@ -28,8 +28,22 @@ impl Runtime {
     /// The path must be an authentic native SDK image for this source pin.
     /// See `mojo_sys::initialize` for the native-code trust boundary.
     pub unsafe fn load(path: impl AsRef<std::path::Path>, role: Role) -> Result<Self, InitError> {
+        // SAFETY: 调用者已满足默认官方原生库的信任前提。
+        unsafe { Self::load_with_config(path, role, RuntimeConfig::default()) }
+    }
+
+    /// 加载显式选择 Chromium 提交的原生库。
+    ///
+    /// # Safety
+    /// 原生库必须来自可信构建，且 C ABI、生成类型及 thunk 布局与本 SDK 兼容。
+    /// 版本字符串校验不构成二进制真实性或兼容性保证。
+    pub unsafe fn load_with_config(
+        path: impl AsRef<std::path::Path>,
+        role: Role,
+        config: RuntimeConfig<'_>,
+    ) -> Result<Self, InitError> {
         unsafe {
-            raw_ffi::initialize(path.as_ref(), role == Role::Broker)?;
+            raw_ffi::initialize_with_config(path.as_ref(), role == Role::Broker, config)?;
         }
         Ok(Self { _private: () })
     }

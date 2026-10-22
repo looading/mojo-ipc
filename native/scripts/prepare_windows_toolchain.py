@@ -17,7 +17,7 @@ import sys
 import tempfile
 
 
-COMMIT = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+from chromium_source import OFFICIAL_COMMIT as COMMIT, add_revision_argument
 MIN_SDK = (10, 0, 28000, 0)
 MACHINES = {"x86": 0x014C, "x64": 0x8664, "arm64": 0xAA64}
 COMPAT_PATCH = """diff --git a/build/config/win/visual_studio_version.gni b/build/config/win/visual_studio_version.gni
@@ -124,11 +124,11 @@ def check_atl(include: Path, libraries: dict[str, Path]) -> dict[str, object]:
     return result
 
 
-def append_atl(root: Path, include: Path, libraries: dict[str, Path]) -> None:
+def append_atl(root: Path, include: Path, libraries: dict[str, Path], *, chromium_commit: str = COMMIT) -> None:
     """Add a delta view, leaving every existing CRT/SDK file identity intact."""
     manifest_path = root / "adapter-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("chromium_commit") != COMMIT or manifest.get("schema") != 1:
+    if manifest.get("chromium_commit") != chromium_commit or manifest.get("schema") != 1:
         raise RuntimeError(f"not a matching SDK adapter root: {root}")
     architectures = manifest["architectures"]
     if set(libraries) != set(architectures):
@@ -194,13 +194,14 @@ def atl_arguments(parser: argparse.ArgumentParser) -> None:
 def add_atl_main() -> int:
     parser = argparse.ArgumentParser(description="Append genuine ATL to an existing adapter root without replacing CRT/SDK files.")
     parser.add_argument("--winsysroot", required=True, type=directory)
+    add_revision_argument(parser)
     atl_arguments(parser)
     args = parser.parse_args(sys.argv[2:])
     if args.atl_include_dir is None:
         parser.error("--atl-include-dir is required")
     libraries = {architecture: getattr(args, f"atl_lib_{architecture}")
                  for architecture in MACHINES if getattr(args, f"atl_lib_{architecture}") is not None}
-    append_atl(args.winsysroot, args.atl_include_dir, libraries)
+    append_atl(args.winsysroot, args.atl_include_dir, libraries, chromium_commit=args.chromium_revision)
     return 0
 
 
@@ -223,6 +224,7 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path,
                         help="new local winsysroot directory; must not exist")
     atl_arguments(parser)
+    add_revision_argument(parser)
     args = parser.parse_args()
     try:
         version = tuple(int(part) for part in args.sdk_version.split("."))
@@ -325,7 +327,7 @@ def main() -> int:
         (staging / "gn-args.gn").write_text("\n".join(
             f"{key} = {json.dumps(value)}" for key, value in gn_args.items()) + "\n", encoding="utf-8")
         (staging / "chromium-compat.patch").write_text(COMPAT_PATCH, encoding="utf-8")
-        manifest = {"schema": 1, "chromium_commit": COMMIT,
+        manifest = {"schema": 1, "chromium_commit": args.chromium_revision,
                     "sdk_version": args.sdk_version, "crt_version": crt_version,
                     "visual_studio_version": args.visual_studio_version,
                     "architectures": architectures, "wdk_available": False,

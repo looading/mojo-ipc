@@ -5,6 +5,12 @@ The README contains project setup and usage instructions and links to this file.
 
 ## Unreleased
 
+- Add explicit `RuntimeConfig` and custom Chromium revision selection to native
+  build, Windows toolchain and packaging commands. Preserve the official default,
+  strict C ABI/layout checks, and path/role/revision identity after initialization.
+  Custom native builds do not change the generated bindings' source provenance.
+
+
 - Add opt-in `HealthPolicy` and session-owned `HealthProbe` registration with
   a retained `HealthBinding`. Require timely probe registration for monitored
   readiness, then publish health events and per-attempt counters from host polls.

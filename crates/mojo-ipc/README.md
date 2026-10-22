@@ -10,6 +10,22 @@ buffers, and process bootstrap helpers. This is an early SDK for communication
 between your own Rust processes. Protocol version negotiation and interoperability
 with arbitrary Chromium versions are not supported.
 
+## Custom Chromium checkout
+
+The default `Runtime::load` keeps the official Chromium pin. For a trusted custom native build, use an explicit configuration in **each process**:
+
+```rust,no_run
+use mojo_ipc::{Role, Runtime, RuntimeConfig};
+let config = RuntimeConfig {
+    chromium_commit: "6d2bf4f33d77670349c45ffa1464bef101c0eda5",
+};
+// SAFETY: the caller audited the custom image, C ABI and generated C/thunk layouts.
+let runtime = unsafe { Runtime::load_with_config("/trusted/libmojo_rs_native.dylib", Role::Broker, config)? };
+# Ok::<(), mojo_ipc::InitError>(())
+```
+
+The supplied revision is checked exactly; it does not bypass source or ABI checks. A process cannot change the runtime path, broker/participant role or revision after successful initialization. Bindings and the Mojom generator retain their own official source provenance. See [native producer configuration](../../native/README.md#custom-source) for checkout/build commands and compatibility requirements.
+
 ## Upgrading to 0.2.1
 
 SDK `0.2.1` is Rust source compatible with `0.2.0`. Use matching component

@@ -54,7 +54,7 @@ struct MojoRsChild {
 
 namespace {
 
-constexpr char kCommit[] = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd";
+constexpr char kCommit[] = MOJO_RS_CHROMIUM_COMMIT;
 constexpr char kBootstrapSwitch[] = "mojo-rust-sdk-bootstrap";
 constexpr char kBootstrapName[] = "mojo-rust-sdk/bootstrap/v1";
 

@@ -41,7 +41,22 @@ python3 native/scripts/build_native.py --chromium-src /path/to/chromium/src --bu
 python3 native/scripts/build_native.py --chromium-src /path/to/chromium/src --smoke
 ```
 
-The installer checks `git rev-parse HEAD` against the pinned commit, copies this
+### Custom source
+
+The default is the official Chromium checkout and commit shown above; the hosted release workflow continues to use that default. The local builder accepts `--chromium-src` from any user-managed Git repository. Prepare its checkout, DEPS and toolchains yourself, then explicitly supply its full revision:
+
+```sh
+python3 native/scripts/build_native.py \
+  --chromium-src /path/to/custom-chromium/src \
+  --chromium-revision 6d2bf4f33d77670349c45ffa1464bef101c0eda5 \
+  --build --target-os mac --target-cpu arm64
+```
+
+`HEAD` must match the chosen revision before any overlay is written. The builder also writes the selected revision as the installed overlay's GN default, including install-only mode. It carries that revision into the overlay marker, GN's `mojo_rs_chromium_commit`, the exported native getter and artifact manifest; `--gn-args` and `--gn-args-file` cannot override it. `prepare_windows_toolchain.py` (including `add-atl`) and `package_native.py` accept the same `--chromium-revision` and default to the official pin. Official release publication keeps its official pin validation.
+
+Custom revisions must preserve the SDK C ABI, generated Mojo C types, thunk layouts and allocator isolation. This option does not make arbitrary Chromium versions compatible. The official pin retains its existing `use_alloc_token=false` argument; custom pins omit that removed argument and may need version-specific GN options supplied explicitly. The existing checks forbidding allocator replacement remain. Build and run native acceptance when producing a new library, and select the same revision with `RuntimeConfig` in every Rust process. Ordinary Cargo builds do not build Chromium.
+
+The installer checks `git rev-parse HEAD` against the selected commit, copies this
 directory to `//sdk/mojo_rs/native`, and stops there unless `--build` or `--smoke`
 was requested. `--build` additionally runs GN with a non-component release
 configuration and builds `//sdk/mojo_rs/native:runtime`. `--smoke` includes the

@@ -18,7 +18,7 @@ import subprocess
 import sys
 
 
-COMMIT = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+from chromium_source import OFFICIAL_COMMIT as COMMIT, add_revision_argument
 LABEL = "//sdk/mojo_rs/native:runtime"
 MARKER = ".mojo-rust-sdk-overlay"
 
@@ -42,6 +42,7 @@ def tool(name: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--chromium-src", type=Path, required=True)
+    add_revision_argument(parser)
     parser.add_argument("--out", type=Path, help="GN output, relative to checkout")
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--smoke", action="store_true", help="build and run native smoke")
@@ -59,6 +60,9 @@ def main() -> int:
         parser.error("--jobs must be positive")
     extra_gn_args = ((args.gn_args_file.expanduser().read_text(encoding="utf-8") + "\n")
                      if args.gn_args_file else "") + args.gn_args
+
+    if re.search(r"\bmojo_rs_chromium_commit\s*=", extra_gn_args):
+        raise RuntimeError("use --chromium-revision instead of overriding it in --gn-args")
 
     system = platform.system()
     host_os = {"Darwin": "mac", "Linux": "linux", "Windows": "win"}.get(system)
@@ -102,8 +106,8 @@ def main() -> int:
     if not (checkout / ".gn").is_file():
         raise RuntimeError(f"not a Chromium src checkout: {checkout}")
     actual = checked(["git", "rev-parse", "HEAD"], cwd=checkout)
-    if actual != COMMIT:
-        raise RuntimeError(f"Chromium revision mismatch: wanted {COMMIT}, found {actual}")
+    if actual != args.chromium_revision:
+        raise RuntimeError(f"Chromium revision mismatch: wanted {args.chromium_revision}, found {actual}")
     overlay = checkout / "sdk/mojo_rs/native"
     if overlay.exists() and not (overlay / MARKER).is_file():
         raise RuntimeError(f"refusing to overwrite an unrelated directory: {overlay}")
@@ -111,7 +115,10 @@ def main() -> int:
     shutil.copytree(source, overlay, dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store",
                                                  "work", ".research"))
-    (overlay / MARKER).write_text(COMMIT + "\n", encoding="utf-8")
+    # 安装后手动执行 GN 时，默认版本也必须与当前 checkout 相同。
+    gn_file = overlay / "BUILD.gn"
+    gn_file.write_text(gn_file.read_text(encoding="utf-8").replace(COMMIT, args.chromium_revision), encoding="utf-8")
+    (overlay / MARKER).write_text(args.chromium_revision + "\n", encoding="utf-8")
     print(f"Installed overlay: {overlay}")
     if not args.build and not args.smoke:
         return 0
@@ -122,9 +129,12 @@ def main() -> int:
     # have been built on the current machine. Target-specific overrides and
     # the actual final link/dependency closure must be validated in CI.
     target_os_arg = f'target_os="{os_name}" ' if cross_os else ""
+    # 新 Chromium 已移除此 GN 参数；默认官方 pin 保留原配置。
+    token_arg = "use_alloc_token=false " if args.chromium_revision == COMMIT else ""
     gn_args = (f'is_debug=false is_component_build=false symbol_level=1 '
                f'use_allocator_shim=false use_partition_alloc_as_malloc=false '
-               f'enable_backup_ref_ptr_support=false use_alloc_token=false '
+               f'enable_backup_ref_ptr_support=false ' + token_arg +
+               f'mojo_rs_chromium_commit="{args.chromium_revision}" '
                f'target_cpu="{cpu}" ' + target_os_arg + extra_gn_args).strip()
     gn = tool("gn")
     ninja = shutil.which("autoninja") or tool("ninja")
@@ -156,7 +166,7 @@ def main() -> int:
         shutil.copy2(library, dest / filename)
         shutil.copy2(source / "include/mojo_rs_native.h", dest / "mojo_rs_native.h")
         manifest = {
-            "chromium_commit": COMMIT,
+            "chromium_commit": args.chromium_revision,
             "abi_version": 1,
             "os": os_name,
             "cpu": cpu,
