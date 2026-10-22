@@ -339,6 +339,25 @@ jobs:
           if result.returncode:
               raise SystemExit(f"independent-process named-channel fixture failed: exit {result.returncode}")
 
+      - name: Run the real application service network and restart test
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          command = [
+              "cargo", "+1.96.0", "test", "--locked", "--target", os.environ["NATIVE_TARGET"],
+              "-p", "mojo-service-network", "--test", "native_network", "--", "--ignored", "--nocapture",
+          ]
+          result = subprocess.run(command, text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=180)
+          sys.stdout.write(result.stdout)
+          sys.stderr.write(result.stderr)
+          artifact = Path(os.environ["MOJO_NATIVE_ARTIFACT_DIR"])
+          (artifact / "service-network.log").write_text(result.stdout + result.stderr, encoding="utf-8")
+          if result.returncode:
+              raise SystemExit(f"service network fixture failed: exit {result.returncode}")
+
       - name: Run the real Rust parent-child typed IPC example
         run: |
           import datetime
@@ -378,6 +397,7 @@ jobs:
               "native_smoke_passed": True,
               "independent_named_process_fixture_passed": True,
               "typed_parent_child_example_passed": True,
+              "service_network_passed": True,
               "native_manifest": "native-manifest.json",
               "runtime_dependency_audit": "pending package audit",
           }

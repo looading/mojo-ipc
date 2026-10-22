@@ -1,9 +1,175 @@
 # 实施与验证记录
 
-记录更新：2026-10-21（原生基础运行验证为 2026-10-20，benchmark 为 2026-10-21）。Chromium 固定为
+记录更新：2026-10-22（原生基础运行验证为 2026-10-20，benchmark 为 2026-10-21）。Chromium 固定为
 `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`，SDK ABI 为 1。
 
 ## 当前结论
+
+### Unreleased continuous process health (2026-10-22)
+
+The experimental control protocol appends HealthProbe and SetHealthProbe;
+existing control method ordinals and native ABI remain unchanged. Monitoring is
+opt-in and driven by host polls. The same trusted local macOS arm64 native image
+recorded below was used.
+
+- Workspace tests: 144 passed, 19 opt-in native tests ignored. The focused run
+  passed all 38 service-layer unit tests and all seven service-network native
+  tests (45 total). Generator tests: 6 passed. Release tooling: 19 run, one
+  existing real-GN test skipped.
+- Deterministic tests cover receive-time deadline boundaries, late host polls,
+  one pending sample, timeout/occupied-slot failures, success resetting failure
+  history, replacement preserving the current timeout window, stale replies and
+  callback destruction. Configuration rejects zero/unrepresentable durations
+  and zero thresholds; health checking defaults off.
+- Native checks cover periodic success, transient false/recovery, explicit live
+  probe replacement, missing-probe startup timeout, threshold failures consuming
+  the existing restart budget, and a genuinely hung participant dispatch sequence.
+  The latter retains one outstanding raw request, is reaped before replacement,
+  and produces Added/Removed/Added for the original service subscription with a
+  new generation. Explicit stop leaves no service-network worker processes.
+- Independent review identified startup readiness evidence being lost when a
+  timely probe was atomically replaced after the deadline, before a late host
+  poll. Fixed by preserving the start of uninterrupted registration; removal
+  followed by reinstall starts a new period. The regression failed before the
+  fix and passed afterwards. Native late replacement publishes an acknowledged
+  marker before the host first observes Ready; the live replacement returns
+  false once then true to prove the new endpoint is actually used.
+- Logs: `target/health-workspace-check.log`, `target/health-workspace-tests.log`,
+  `target/health-combined-tests.log`, `target/health-codegen.log`,
+  `target/health-release-tests.log`, `target/health-readiness-{red,green}.log`.
+
+A constant true probe establishes dispatch responsiveness only; applications
+supply their own short nonblocking business checks. Scheduling requires regular
+host polls. A timed-out raw request occupies its transport slot until reply or
+disconnect; later samples fail rather than queue more requests. All network
+native tests are included in the existing producer gate, but remote CI and
+non-macOS native execution were not performed here.
+
+### Unreleased dynamic discovery (2026-10-21)
+
+The optional service control protocol now appends Watch and a dedicated
+ServiceWatch interface. Native SDK ABI and existing control method ordinals
+remain unchanged; new watch peers require matching control definitions.
+The same trusted local macOS arm64 native image recorded below was used.
+
+- Workspace/all-target check passed. Ordinary workspace tests: 136 passed,
+  18 opt-in native tests ignored. Separately, all 30 service unit tests and all
+  six service-network native tests passed (36 in the focused run).
+- Registry tests cover authorized snapshot/event ordering, hidden mutations not
+  advancing local revisions, stale-token replacement, closed-session cleanup
+  and concurrent snapshot-install versus registration without missing/duplicate
+  additions. Buffer/slot tests cover bounded ordered delivery, terminal overflow,
+  duplicate Next preserving its first waiter, reentrant close and Waker cleanup.
+- The native subscription fixture passed for snapshot filtering, repeated
+  timeout reuse of one Next RPC, async wakeup and dropped-wait Waker release,
+  factory removal, stale replacement cleanup, filtered revisions, slow-consumer
+  overflow and fresh resubscription, directory/host lease teardown and raw Busy
+  rejection without losing the original waiter.
+- The same three-process consumer now discovers and reconnects from snapshots
+  and Added events, resolving current endpoints after each candidate. It makes
+  one List request to check permissions; it does not repeatedly poll List.
+- Official generator: 6 passed. Release tooling: 19 run, one existing real-GN
+  test skipped. Formatting/whitespace checks passed. Independent review found no
+  correctness blocker in the watch/registry paths, consumer or native fixture.
+- Logs: `target/watch-workspace-check.log`, `target/watch-workspace-tests.log`,
+  `target/watch-combined-tests.log`, `target/watch-codegen.log`,
+  `target/watch-release-tests.log`.
+
+Overflow requires explicit resubscription; the immutable initial snapshot is
+not a live cache. Native execution remains local macOS arm64 only. The existing
+native CI gate includes all six network tests; remote jobs were not run here.
+
+### Unreleased bounded service calls (2026-10-21)
+
+The optional `CallClient`/`CallContext` layer adds standard-library Future,
+deadline, cancellation and bounded-response admission above existing bindings.
+Native SDK ABI, generated SDK method signatures and bindings were unchanged;
+only the private service-network example protocol was extended for verification.
+The trusted macOS arm64 native runtime provenance remains the one recorded below.
+
+- Workspace/all-target check passed. Ordinary workspace tests: 128 passed,
+  17 native opt-in tests ignored. Separately, all 22 service-layer unit tests
+  and all five service-network native tests passed (27 in the focused run).
+- New pure tests cover completion/cancellation races, executor deadline wakeup,
+  weak handle ownership, timer/client record removal, context/last-owner shutdown,
+  reentrant Waker wake/drop and rejection of timer-thread blocking waits.
+- The three-process consumer now uses bounded business calls. Provider crash
+  resolves its in-flight call as Disconnected, and the same consumer reconnects
+  to the automatically restarted provider without replaying the old request.
+- Native held-response checks passed for timeout, cross-thread cancellation,
+  dropped calls, capacity rejection before send, late-reply capacity recovery,
+  late returned message-pipe handle release, peer/client drop, context shutdown
+  and rejection of blocking waits on the dispatch sequence.
+- Independent review found no blocking issue after local record cleanup was
+  moved before completion publication and the timer/last-owner tests were added.
+- Official generator: 6 passed. Release tooling: 19 run, one existing real-GN
+  test skipped. Formatting/whitespace checks passed. Logs are
+  `target/calls-workspace-check.log`, `target/calls-workspace-tests.log`,
+  `target/calls-combined-tests.log`, `target/calls-codegen.log`,
+  `target/calls-release-tests.log`.
+
+Cancellation is local only; sent requests retain bounded binding response slots
+until reply/disconnect, preserving original late-message decoding/validation.
+Native execution for this change remains local macOS arm64 only. Existing native
+CI includes all five network tests; remote producer jobs were not run here.
+
+### Unreleased process supervisor (2026-10-21)
+
+The reusable host-driven `ProcessSupervisor` is implemented above the existing
+runtime. The same trusted macOS arm64 native image described below was used;
+native ABI and Mojom schemas were unchanged.
+
+- Workspace/all-target checks passed. Ordinary workspace tests: 117 passed,
+  16 native opt-in tests ignored. All four service-network native tests passed
+  separately (the focused run also passed all 11 service-layer unit tests).
+- The native network now uses public supervision, with exactly one automatic
+  provider restart and the same consumer reconnecting to the new generation.
+- Additional native checks cover missing executable retries, crash-loop budget
+  exhaustion, successful exit without retry, queued/backoff cancellation,
+  registration timeout, nonjoining participants, control loss, forced shutdown,
+  and registration timestamps across delayed host polling.
+- Required service readiness is checked atomically for exact session ownership,
+  version and registration time. Empty requirements mean host admission only,
+  not a peer handshake or application readiness. A bootstrap fixture initially
+  assumed accept completion proved peer readiness; it was corrected to require
+  a service registration, matching the actual API boundary.
+- Official generator: 6 passed. Release tooling: 19 run, one existing real-GN
+  test skipped. Formatting and whitespace checks passed. Independent code review
+  findings concerning atomic readiness, duplicate requirements and retry counts
+  were addressed.
+- Logs: `target/supervisor-workspace-check.log`,
+  `target/supervisor-workspace-tests.log`, `target/supervisor-native-tests.log`,
+  `target/supervisor-codegen.log`, `target/supervisor-release-tests.log`.
+
+Native runtime execution for this change was local macOS arm64 only. The existing
+native CI gate runs the four service-network tests on each producer target;
+those remote jobs were not executed in this session. Startup readiness is not
+continuous health monitoring, and the supervisor owns direct children only.
+
+### Unreleased local service layer (2026-10-21)
+
+The new `mojo-service` layer and `examples/service-network` were exercised on
+macOS arm64 with a locally built, trusted native image. Its manifest matches
+Chromium `bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd`, native ABI v1 and SHA-256
+`f9856ebaed09b033285bbb61d6e2b8510fed914ea4c796cc762b802ca1564134`.
+
+- Six new pure Rust tests cover exact permissions, invalid names, duplicate
+  ownership, exact versions, stale generations and closed-session isolation.
+- Three opt-in native tests passed: actual manager/provider/consumer calls and
+  provider crash/restart; factory/directory/host-lease cleanup and unregister;
+  abrupt broker exit with a dedicated participant that ignores control loss.
+- Workspace/all-target checks and tests passed: 112 passed, 15 native tests
+  ignored in the ordinary run. The three new native tests were run separately.
+- The official Mojom generator suite passed (6 tests). Native release tooling
+  passed (19 tests run, one existing real-GN test skipped).
+- Formatting and whitespace checks passed. Logs are under
+  `target/service-{workspace-check,workspace-tests,network-native,codegen,release-tests}.log`.
+
+This extends local service-layer evidence to macOS arm64; it does not certify
+the complete release matrix or other platforms. Native CI now requires
+`service_network_passed` before packaging, but those CI jobs were not run locally.
+
+### Existing SDK baseline
 
 官方 Rust bindings 的 Cargo 移植、官方 Mojom 生成链路与原生 C ABI 已落地。
 本次已下载固定版本 Chromium 源码，完成 DEPS 同步、上游 hooks 和 macOS x86_64

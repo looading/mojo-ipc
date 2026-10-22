@@ -1,0 +1,14 @@
+module demo.services;
+
+interface Echo {
+  Ping(string text) => (string echoed, uint32 instance, uint32 process_id);
+  Crash() => ();
+};
+
+interface CallProbe {
+  Echo(uint64 value) => (uint64 echoed);
+  Hold(uint64 value) => (uint64 echoed);
+  HoldPipe() => (handle<message_pipe> pipe);
+  Pending() => (uint32 count);
+  Flush() => (uint32 released);
+};

@@ -3,6 +3,10 @@
 
 import("//base/allocator/allocator.gni")
 
+declare_args() {
+  mojo_rs_chromium_commit = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+}
+
 config("public_headers") {
   include_dirs = [ "include" ]
 }
@@ -25,7 +29,10 @@ shared_library("runtime") {
     "include/mojo_rs_native.h",
     "runtime.cc",
   ]
-  defines = [ "MOJO_RS_NATIVE_IMPLEMENTATION" ]
+  defines = [
+    "MOJO_RS_NATIVE_IMPLEMENTATION",
+    "MOJO_RS_CHROMIUM_COMMIT=\"" + mojo_rs_chromium_commit + "\"",
+  ]
   configs += [ ":exports" ]
   public_configs = [ ":public_headers" ]
   deps = [

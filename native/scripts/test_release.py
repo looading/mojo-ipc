@@ -197,18 +197,41 @@ class PackageTests(unittest.TestCase):
         (artifact / "private-build.log").write_text("not for distribution")
         return artifact
 
-    def build_package(self, target, artifact=None, *, sdk_root=package.ROOT):
+    def build_package(self, target, artifact=None, *, sdk_root=package.ROOT, chromium_commit=package.COMMIT):
         artifact = artifact or self.artifact(target)
 
         def generate_notices(command, **kwargs):
             self.assertIn("license_file", command)
             Path(command[-1]).write_text("Third-party dependency notice fixture\n")
 
-        with patch.object(package, "inspect", return_value=package.COMMIT), \
+        with patch.object(package, "inspect", return_value=chromium_commit), \
              patch.object(package, "audit_library", return_value=audit_fixture(target)), \
              patch.object(package.subprocess, "run", side_effect=generate_notices):
             return package.create_package(artifact, target, self.chromium, self.root / "gn-out", self.output,
-                                          sdk_root=sdk_root)
+                                          sdk_root=sdk_root, chromium_commit=chromium_commit)
+
+    def test_separate_sdk_checkout_and_custom_chromium_revision_are_preserved_together(self):
+        sdk = self.root / "custom-sdk"
+        (sdk / "native/include").mkdir(parents=True)
+        (sdk / "Cargo.toml").write_text('[workspace.package]\nversion = "9.8.7"\n')
+        (sdk / "LICENSE").write_bytes(b"Custom SDK license\r\n")
+        (sdk / "native/include/mojo_rs_native.h").write_bytes(b"Custom SDK header\n")
+        target = next(iter(package.TARGETS))
+        artifact = self.artifact(target)
+        custom_revision = "1" * 40
+        path = artifact / "native-manifest.json"
+        native = json.loads(path.read_text())
+        native["chromium_commit"] = custom_revision
+        path.write_text(json.dumps(native))
+        (artifact / "mojo_rs_native.h").write_bytes(b"Custom SDK header\n")
+        archive = self.build_package(target, artifact, sdk_root=sdk, chromium_commit=custom_revision)
+        self.assertTrue(archive.name.startswith("mojo-native-9.8.7-"))
+        with tarfile.open(archive) as stream:
+            members = {Path(m.name).name: stream.extractfile(m).read() for m in stream.getmembers()}
+        self.assertEqual(json.loads(members["package-manifest.json"])["chromium_commit"], custom_revision)
+        self.assertEqual(json.loads(members["native-manifest.json"])["chromium_commit"], custom_revision)
+        self.assertEqual(members["mojo_rs_native.h"], b"Custom SDK header\n")
+        self.assertEqual(members["LICENSE"], (sdk / "LICENSE").read_bytes())
 
     def test_separate_sdk_checkout_controls_package_version_header_and_license(self):
         sdk = self.root / "sdk"
@@ -225,7 +248,7 @@ class PackageTests(unittest.TestCase):
             members = {Path(m.name).name: stream.extractfile(m).read() for m in stream.getmembers()}
         self.assertEqual(json.loads(members["package-manifest.json"])["sdk_version"], "9.8.7")
         self.assertEqual(members["mojo_rs_native.h"], b"SDK checkout header\n")
-        self.assertEqual(members["LICENSE"], b"SDK checkout license\n")
+        self.assertEqual(members["LICENSE"], (sdk / "LICENSE").read_bytes())
         for other in package.TARGETS:
             if other != target:
                 other_artifact = self.artifact(other)
@@ -255,7 +278,7 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(any(name.endswith("/THIRD_PARTY_NOTICES.txt") for name in names))
 
     def test_failed_stale_or_wrong_target_acceptance_cannot_be_packaged(self):
-        for key, value in (("native_smoke_passed", False), ("sdk_commit", "b" * 40),
+        for key, value in (("native_smoke_passed", False), ("service_network_passed", False), ("sdk_commit", "b" * 40),
                            ("target", "invalid"), ("github_run_id", "old-run")):
             with self.subTest(key=key):
                 target = next(iter(package.TARGETS))

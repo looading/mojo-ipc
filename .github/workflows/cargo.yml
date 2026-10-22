@@ -61,7 +61,9 @@ jobs:
           path: ${{ env.XWIN_CACHE_DIR }}
           key: xwin-${{ runner.os }}-0.23.1-vs17-x86_64-v1
       - name: Compile and link all Windows Rust targets
-        run: cargo xwin build --workspace --all-targets --locked --target x86_64-pc-windows-msvc
+        # Use the installed toolchain without auto-installing rustfmt from the
+        # repository override file into the hosted runner's existing toolchain.
+        run: cargo +1.96.0 xwin build --workspace --all-targets --locked --target x86_64-pc-windows-msvc
       # This job links Rust Windows PE files, including the typed Echo example.
       # The Mojo Core DLL is built separately with Chromium GN. No Windows
       # programs run here; native.yml retains the real Windows runtime gates.
