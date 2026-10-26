@@ -4,7 +4,14 @@
 import("//base/allocator/allocator.gni")
 
 declare_args() {
+  # 显式生成 Win7 SP1 x64 API 配置；默认现代运行库保持不变。
+  mojo_rs_windows7_compat = false
   mojo_rs_chromium_commit = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
+}
+
+config("windows7_compat") {
+  defines = [ "MOJO_RS_WINDOWS7_COMPAT=1" ]
+  ldflags = [ "/SUBSYSTEM:CONSOLE,6.01", "/OSVERSION:6.1" ]
 }
 
 config("public_headers") {
@@ -34,6 +41,12 @@ shared_library("runtime") {
     "MOJO_RS_CHROMIUM_COMMIT=\"" + mojo_rs_chromium_commit + "\"",
   ]
   configs += [ ":exports" ]
+  if (mojo_rs_windows7_compat) {
+    assert(is_win && current_cpu == "x64", "Win7 profile requires Windows x64")
+    sources += [ "windows7_compat.cc" ]
+    configs -= [ "//build/config/win:console" ]
+    configs += [ ":windows7_compat" ]
+  }
   public_configs = [ ":public_headers" ]
   deps = [
     "//base",
@@ -55,6 +68,12 @@ shared_library("runtime") {
 executable("runtime_smoke") {
   testonly = true
   sources = [ "tests/runtime_smoke.cc" ]
+  if (mojo_rs_windows7_compat) {
+    assert(is_win && current_cpu == "x64", "Win7 profile requires Windows x64")
+    sources += [ "windows7_compat.cc" ]
+    configs -= [ "//build/config/win:console" ]
+    configs += [ ":windows7_compat" ]
+  }
   deps = [
     ":runtime",
     "//mojo/public/c/system:headers",

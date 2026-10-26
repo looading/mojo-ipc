@@ -55,6 +55,7 @@ def main() -> int:
                         help="target CPU (default: host CPU, or x64 for cross-OS Windows builds)")
     parser.add_argument("--artifact-dir", type=Path)
     parser.add_argument("--jobs", type=int, help="maximum local Ninja parallelism")
+    parser.add_argument("--windows7", action="store_true", help="explicit Windows 7 SP1 x64 API profile (requires separate OS acceptance)")
     args = parser.parse_args()
     if args.jobs is not None and args.jobs < 1:
         parser.error("--jobs must be positive")
@@ -71,6 +72,10 @@ def main() -> int:
     cpu = args.target_cpu or ("x64" if cross_os and os_name == "win" else {
         "arm64": "arm64", "aarch64": "arm64", "AMD64": "x64", "x86_64": "x64"
     }.get(platform.machine()))
+    if args.windows7 and (os_name != "win" or cpu != "x64"):
+        raise RuntimeError("Win7 profile requires Windows x64")
+    if re.search(r"\bmojo_rs_windows7_compat\s*=", extra_gn_args):
+        raise RuntimeError("use --windows7 instead of overriding the native profile in --gn-args")
     # Validate explicit target requests before touching the checkout/overlay.
     # An install-only invocation without a target remains platform independent.
     if args.build or args.smoke or args.target_os:
@@ -135,7 +140,7 @@ def main() -> int:
                f'use_allocator_shim=false use_partition_alloc_as_malloc=false '
                f'enable_backup_ref_ptr_support=false ' + token_arg +
                f'mojo_rs_chromium_commit="{args.chromium_revision}" '
-               f'target_cpu="{cpu}" ' + target_os_arg + extra_gn_args).strip()
+               f'target_cpu="{cpu}" ' + target_os_arg + ('mojo_rs_windows7_compat=true ' if args.windows7 else '') + extra_gn_args).strip()
     gn = tool("gn")
     ninja = shutil.which("autoninja") or tool("ninja")
     # This directory is an overlay, so Chromium's normal //:default does not
@@ -177,6 +182,9 @@ def main() -> int:
             "native_smoke_passed": smoke_passed,
             "runtime_dependency_audit": "required before redistribution",
         }
+        if args.windows7:
+            manifest.update(windows_api_profile="win7-sp1", minimum_windows_build=7601,
+                            win7_runtime_verified=False)
         (dest / "native-manifest.json").write_text(
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         print(f"Native artifact: {dest / filename}")

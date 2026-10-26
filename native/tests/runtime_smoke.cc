@@ -1,3 +1,6 @@
+#if defined(MOJO_RS_WINDOWS7_COMPAT)
+#include "../windows7_compat.h"
+#endif
 // Executable integration test. Build through this overlay's runtime_smoke GN
 // target; it links only the SDK ABI and upstream C type declarations.
 #include "mojo_rs_native.h"
@@ -268,6 +271,12 @@ bool TaskSmoke() {
 }  // namespace
 
 int main(int argc, char** argv) {
+#if defined(MOJO_RS_WINDOWS7_COMPAT)
+  if (!Check(MojoRsWindows7CompatSmoke(), "Win7 API fallbacks")) {
+    return 1;
+  }
+  std::cout << "win7 compatibility fallbacks passed" << std::endl;
+#endif
   if (argc < 1 || argv == nullptr) {
     return 1;
   }
