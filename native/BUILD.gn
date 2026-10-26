@@ -26,6 +26,10 @@ config("exports") {
     inputs = [ "exports_linux.map" ]
     ldflags = [ "-Wl,--version-script=" +
                 rebase_path("exports_linux.map", root_build_dir) ]
+  } else if (is_win && current_cpu == "x86") {
+    # x86 C 符号带前导下划线；公开 DLL 名称仍保持 ABI1 的无装饰入口。
+    inputs = [ "exports_windows_x86.def" ]
+    ldflags = [ "/DEF:" + rebase_path("exports_windows_x86.def", root_build_dir) ]
   }
 }
 
@@ -41,7 +45,8 @@ shared_library("runtime") {
   ]
   configs += [ ":exports" ]
   if (mojo_rs_windows7_compat) {
-    assert(is_win && current_cpu == "x64", "Win7 profile requires Windows x64")
+    assert(is_win && (current_cpu == "x64" || current_cpu == "x86"),
+           "Win7 profile requires Windows x64/x86")
     sources += [ "windows7_compat.cc" ]
     configs -= [ "//build/config/win:console" ]
     configs += [ ":windows7_compat" ]
@@ -68,7 +73,8 @@ executable("runtime_smoke") {
   testonly = true
   sources = [ "tests/runtime_smoke.cc" ]
   if (mojo_rs_windows7_compat) {
-    assert(is_win && current_cpu == "x64", "Win7 profile requires Windows x64")
+    assert(is_win && (current_cpu == "x64" || current_cpu == "x86"),
+           "Win7 profile requires Windows x64/x86")
     sources += [ "windows7_compat.cc" ]
     configs -= [ "//build/config/win:console" ]
     configs += [ ":windows7_compat" ]

@@ -1,0 +1,3 @@
+LIBRARY mojo_rs_native
+EXPORTS
+    MojoRsGetApiV1

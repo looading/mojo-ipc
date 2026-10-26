@@ -52,11 +52,11 @@ def main() -> int:
                         help="additional GN arguments from a saved file; --gn-args follows it")
     parser.add_argument("--target-os", choices=("linux", "mac", "win"),
                         help="target OS (default: host OS; Linux/macOS can build Windows artifacts)")
-    parser.add_argument("--target-cpu", choices=("x64", "arm64"),
+    parser.add_argument("--target-cpu", choices=("x64", "x86", "arm64"),
                         help="target CPU (default: host CPU, or x64 for cross-OS Windows builds)")
     parser.add_argument("--artifact-dir", type=Path)
     parser.add_argument("--jobs", type=int, help="maximum local Ninja parallelism")
-    parser.add_argument("--windows7", action="store_true", help="explicit Windows 7 SP1 x64 API profile (requires separate OS acceptance)")
+    parser.add_argument("--windows7", action="store_true", help="explicit Windows 7 SP1 x64/x86 API profile (requires separate OS acceptance)")
     args = parser.parse_args()
     if args.jobs is not None and args.jobs < 1:
         parser.error("--jobs must be positive")
@@ -73,8 +73,10 @@ def main() -> int:
     cpu = args.target_cpu or ("x64" if cross_os and os_name == "win" else {
         "arm64": "arm64", "aarch64": "arm64", "AMD64": "x64", "x86_64": "x64"
     }.get(platform.machine()))
-    if args.windows7 and (os_name != "win" or cpu != "x64"):
-        raise RuntimeError("Win7 profile requires Windows x64")
+    if cpu == "x86" and (os_name != "win" or not args.windows7):
+        raise RuntimeError("x86 requires explicit Windows7 profile")
+    if args.windows7 and (os_name != "win" or cpu not in ("x64", "x86")):
+        raise RuntimeError("Win7 profile requires Windows x64/x86")
     if re.search(r"\bmojo_rs_windows7_compat\s*=", extra_gn_args):
         raise RuntimeError("use --windows7 instead of overriding the native profile in --gn-args")
     # Validate explicit target requests before touching the checkout/overlay.
@@ -90,8 +92,8 @@ def main() -> int:
             raise RuntimeError(
                 "--smoke cannot run a Windows target on a Linux/macOS host; "
                 "use --build and run native acceptance on a Windows runner")
-        if os_name != "mac" and cpu != "x64":
-            raise RuntimeError("release v1 targets Linux/Windows x64 and macOS x64/arm64")
+        if os_name != "mac" and cpu != "x64" and not (os_name == "win" and args.windows7 and cpu == "x86"):
+            raise RuntimeError("release v1 targets Linux/Windows x64, explicit Win7 x86, and macOS x64/arm64")
         if re.search(r"\b(target_cpu|target_os)\s*=", extra_gn_args):
             raise RuntimeError("use --target-os and --target-cpu instead of overriding them in --gn-args")
     if args.smoke and host_os == "mac":
@@ -129,7 +131,7 @@ def main() -> int:
     if args.windows7:
         profile_gni = overlay / "windows7_compat.gni"
         profile_gni.write_text(profile_gni.read_text().replace("mojo_rs_windows7_compat = false", "mojo_rs_windows7_compat = true"))
-    source_patches = windows7_profile.apply(checkout) if args.windows7 else []
+    source_patches = windows7_profile.apply(checkout, allow_mac_x86=host_os == "mac" and cpu == "x86") if args.windows7 else []
     (overlay / MARKER).write_text(args.chromium_revision + "\n", encoding="utf-8")
     print(f"Installed overlay: {overlay}")
     if not args.build and not args.smoke:

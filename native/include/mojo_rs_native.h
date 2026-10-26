@@ -6,7 +6,12 @@
 
 #if defined(_WIN32)
 #if defined(MOJO_RS_NATIVE_IMPLEMENTATION)
+#if defined(_M_IX86) || defined(__i386__)
+/* The x86 .def exports one undecorated ABI1 entry instead of its C name. */
+#define MOJO_RS_EXPORT
+#else
 #define MOJO_RS_EXPORT __declspec(dllexport)
+#endif
 #else
 #define MOJO_RS_EXPORT __declspec(dllimport)
 #endif

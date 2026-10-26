@@ -82,6 +82,20 @@ copies the library, C header and a checksum
 manifest after a successful build. These options do not replace the required
 platform toolchain setup or the final runtime dependency audit.
 
+The explicit `--windows7` producer profile accepts Windows `x64` and `x86`.
+For example, use `--target-os win --target-cpu x86 --windows7 --build` for a
+separate 32-bit output directory. It keeps the native C ABI at version 1, uses
+the Win7 clock/thread-hint adapter and CNG entropy backend, and records
+`win7_runtime_verified=false` until separate OS acceptance. The x86 DLL retains
+the undecorated `MojoRsGetApiV1` entry through its module definition file;
+Chromium Clang binds the architecture-specific stdcall import slots explicitly.
+The x86 target requires this explicit profile, and is not an additional hosted
+SDK release target. A cross-build is not a Windows or Win7 execution pass.
+On the existing Mac cross producer, a managed source adapter permits this
+explicit noncomponent/non-ASan SDK profile through Chromium's general Mac x86
+support guard. The default guard remains effective for all other configurations;
+this does not add support for a Mac-produced 32-bit Chromium browser.
+
 On macOS, `--smoke` first asks `/usr/bin/arch` to execute a small system binary
 in the selected target architecture. This checks execution capability, including
 Rosetta, before the expensive build. Use `--build` for an architecture the

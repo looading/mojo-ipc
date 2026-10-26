@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <cstdio>
 
-static_assert(sizeof(void*) == 8, "Win7 profile currently supports x64 only");
+static_assert(sizeof(void*) == 8 || sizeof(void*) == 4, "Win7 profile requires x64/x86 pointers");
 
 namespace {
 void WINAPI LegacyWallclock(LPFILETIME output) {
@@ -20,13 +20,25 @@ uint64_t Ticks(const FILETIME& value) {
 }
 }  // namespace
 
-// Windows x64 dllimport 调用引用这些指针槽；模块内强符号阻止链接器从
+// Windows dllimport 调用引用这些指针槽；模块内强符号阻止链接器从
 // Kernel32 import library 引入 Win8 的同名导入。只对显式 Win7 产物编译。
 extern "C" {
+#if defined(_M_IX86) || defined(__i386__)
+#if !defined(__clang__)
+#error "The Win7 x86 import adapter requires Chromium Clang"
+#endif
+// 32 位 stdcall 的 IAT 名含前导下划线和参数字节数。显式 COFF asm 名
+// 避免 C 变量的额外修饰；指针类型保留 Windows 声明的调用约定。
+decltype(&::GetSystemTimePreciseAsFileTime) mojo_rs_clock_import
+    __asm__("__imp__GetSystemTimePreciseAsFileTime@4") = &LegacyWallclock;
+decltype(&::SetThreadInformation) mojo_rs_thread_import
+    __asm__("__imp__SetThreadInformation@16") = &UnsupportedThreadHint;
+#else
 extern decltype(&::GetSystemTimePreciseAsFileTime) __imp_GetSystemTimePreciseAsFileTime;
 extern decltype(&::SetThreadInformation) __imp_SetThreadInformation;
 decltype(&::GetSystemTimePreciseAsFileTime) __imp_GetSystemTimePreciseAsFileTime = &LegacyWallclock;
 decltype(&::SetThreadInformation) __imp_SetThreadInformation = &UnsupportedThreadHint;
+#endif
 }
 
 bool MojoRsWindows7CompatSmoke() {
