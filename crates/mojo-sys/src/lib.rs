@@ -4,9 +4,21 @@
 //! native image and Core are process-lifetime singletons.
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
 
+mod c_padding;
+#[doc(hidden)]
+pub use c_padding::CAnonymousPadding as __CAnonymousPadding;
+
 mod generated {
+    #[cfg(target_pointer_width = "64")]
     include!("generated/types.rs");
+    #[cfg(all(target_os = "windows", target_arch = "x86", target_env = "msvc"))]
+    include!("generated/types_windows_x86.rs");
 }
+#[cfg(not(any(
+    target_pointer_width = "64",
+    all(target_os = "windows", target_arch = "x86", target_env = "msvc")
+)))]
+compile_error!("Mojo C layouts are generated for 64-bit desktop and Windows x86 MSVC targets only");
 pub use generated::*;
 include!("generated/dispatch.rs");
 
@@ -221,6 +233,34 @@ fn system_thunks() -> &'static MojoSystemThunks2 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn public_pointer_slots_keep_the_c_header_layout() {
+        // 官方头的 MOJO_POINTER_FIELD 在 Win32 仍占八字节，不可省略匿名 padding。
+        assert_eq!(size_of::<MojoInitializeOptions>(), 32);
+        assert_eq!(align_of::<MojoInitializeOptions>(), 8);
+        assert_eq!(
+            std::mem::offset_of!(MojoInitializeOptions, mojo_core_path_length),
+            16
+        );
+        assert_eq!(std::mem::offset_of!(MojoInitializeOptions, argv), 24);
+        assert_eq!(size_of::<MojoTrapEvent>(), 32);
+        assert_eq!(align_of::<MojoTrapEvent>(), 8);
+        assert_eq!(std::mem::offset_of!(MojoTrapEvent, result), 16);
+        assert_eq!(std::mem::offset_of!(MojoTrapEvent, signals_state), 20);
+    }
+
+    #[test]
+    fn native_tables_match_the_target_pointer_layout() {
+        #[cfg(target_pointer_width = "64")]
+        let expected = (376, 160, 32, 8);
+        #[cfg(target_pointer_width = "32")]
+        let expected = (188, 84, 16, 4);
+        assert_eq!(size_of::<MojoSystemThunks2>(), expected.0);
+        assert_eq!(size_of::<MojoRsApiV1>(), expected.1);
+        assert_eq!(size_of::<MojoRsSpawnOptions>(), expected.2);
+        assert_eq!(align_of::<MojoRsApiV1>(), expected.3);
+    }
 
     #[test]
     fn default_runtime_config_keeps_the_official_chromium_pin() {

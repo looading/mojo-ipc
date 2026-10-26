@@ -1,0 +1,2466 @@
+// C layout target: i686-pc-windows-msvc.
+// Mojo headers: official Chromium bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd.
+// bindgen 0.72.1 layout; anonymous padding uses opaque MaybeUninit storage.
+pub type __BindgenBitfieldUnit<Storage> = crate::__CAnonymousPadding<Storage>;
+pub type MojoTimeTicks = i64;
+pub type MojoHandle = usize;
+pub const MOJO_HANDLE_INVALID: MojoHandle = 0;
+pub type MojoResult = u32;
+pub const MOJO_RESULT_OK: MojoResult = 0;
+pub const MOJO_RESULT_CANCELLED: MojoResult = 1;
+pub const MOJO_RESULT_UNKNOWN: MojoResult = 2;
+pub const MOJO_RESULT_INVALID_ARGUMENT: MojoResult = 3;
+pub const MOJO_RESULT_DEADLINE_EXCEEDED: MojoResult = 4;
+pub const MOJO_RESULT_NOT_FOUND: MojoResult = 5;
+pub const MOJO_RESULT_ALREADY_EXISTS: MojoResult = 6;
+pub const MOJO_RESULT_PERMISSION_DENIED: MojoResult = 7;
+pub const MOJO_RESULT_RESOURCE_EXHAUSTED: MojoResult = 8;
+pub const MOJO_RESULT_FAILED_PRECONDITION: MojoResult = 9;
+pub const MOJO_RESULT_ABORTED: MojoResult = 10;
+pub const MOJO_RESULT_OUT_OF_RANGE: MojoResult = 11;
+pub const MOJO_RESULT_UNIMPLEMENTED: MojoResult = 12;
+pub const MOJO_RESULT_INTERNAL: MojoResult = 13;
+pub const MOJO_RESULT_UNAVAILABLE: MojoResult = 14;
+pub const MOJO_RESULT_DATA_LOSS: MojoResult = 15;
+pub const MOJO_RESULT_BUSY: MojoResult = 16;
+pub const MOJO_RESULT_SHOULD_WAIT: MojoResult = 17;
+pub type MojoInitializeFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoInitializeOptions {
+    pub struct_size: u32,
+    pub flags: MojoInitializeFlags,
+    pub mojo_core_path: *const ::std::os::raw::c_char,
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
+    pub mojo_core_path_length: u32,
+    pub argc: i32,
+    pub argv: *const *const ::std::os::raw::c_char,
+    pub _bitfield_align_2: [u8; 0],
+    pub _bitfield_2: __BindgenBitfieldUnit<[u8; 4usize]>,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoInitializeOptions",
+    ][::std::mem::size_of::<MojoInitializeOptions>() - 32usize];
+    [
+        "Alignment of MojoInitializeOptions",
+    ][::std::mem::align_of::<MojoInitializeOptions>() - 8usize];
+    [
+        "Offset of field: MojoInitializeOptions::struct_size",
+    ][::std::mem::offset_of!(MojoInitializeOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoInitializeOptions::flags",
+    ][::std::mem::offset_of!(MojoInitializeOptions, flags) - 4usize];
+    [
+        "Offset of field: MojoInitializeOptions::mojo_core_path",
+    ][::std::mem::offset_of!(MojoInitializeOptions, mojo_core_path) - 8usize];
+    [
+        "Offset of field: MojoInitializeOptions::mojo_core_path_length",
+    ][::std::mem::offset_of!(MojoInitializeOptions, mojo_core_path_length) - 16usize];
+    [
+        "Offset of field: MojoInitializeOptions::argc",
+    ][::std::mem::offset_of!(MojoInitializeOptions, argc) - 20usize];
+    [
+        "Offset of field: MojoInitializeOptions::argv",
+    ][::std::mem::offset_of!(MojoInitializeOptions, argv) - 24usize];
+};
+impl MojoInitializeOptions {
+    #[inline]
+    pub fn new_bitfield_1() -> __BindgenBitfieldUnit<[u8; 4usize]> {
+        ::std::default::Default::default()
+    }
+    #[inline]
+    pub fn new_bitfield_2() -> __BindgenBitfieldUnit<[u8; 4usize]> {
+        ::std::default::Default::default()
+    }
+}
+pub type MojoShutdownFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoShutdownOptions {
+    pub struct_size: u32,
+    pub flags: MojoShutdownFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoShutdownOptions",
+    ][::std::mem::size_of::<MojoShutdownOptions>() - 8usize];
+    [
+        "Alignment of MojoShutdownOptions",
+    ][::std::mem::align_of::<MojoShutdownOptions>() - 8usize];
+    [
+        "Offset of field: MojoShutdownOptions::struct_size",
+    ][::std::mem::offset_of!(MojoShutdownOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoShutdownOptions::flags",
+    ][::std::mem::offset_of!(MojoShutdownOptions, flags) - 4usize];
+};
+pub type MojoHandleSignals = u32;
+pub const MOJO_HANDLE_SIGNAL_NONE: MojoHandleSignals = 0;
+pub const MOJO_HANDLE_SIGNAL_READABLE: MojoHandleSignals = 1;
+pub const MOJO_HANDLE_SIGNAL_WRITABLE: MojoHandleSignals = 2;
+pub const MOJO_HANDLE_SIGNAL_PEER_CLOSED: MojoHandleSignals = 4;
+pub const MOJO_HANDLE_SIGNAL_NEW_DATA_READABLE: MojoHandleSignals = 8;
+pub const MOJO_HANDLE_SIGNAL_PEER_REMOTE: MojoHandleSignals = 16;
+pub const MOJO_HANDLE_SIGNAL_QUOTA_EXCEEDED: MojoHandleSignals = 32;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoHandleSignalsState {
+    pub satisfied_signals: MojoHandleSignals,
+    pub satisfiable_signals: MojoHandleSignals,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoHandleSignalsState",
+    ][::std::mem::size_of::<MojoHandleSignalsState>() - 8usize];
+    [
+        "Alignment of MojoHandleSignalsState",
+    ][::std::mem::align_of::<MojoHandleSignalsState>() - 4usize];
+    [
+        "Offset of field: MojoHandleSignalsState::satisfied_signals",
+    ][::std::mem::offset_of!(MojoHandleSignalsState, satisfied_signals) - 0usize];
+    [
+        "Offset of field: MojoHandleSignalsState::satisfiable_signals",
+    ][::std::mem::offset_of!(MojoHandleSignalsState, satisfiable_signals) - 4usize];
+};
+pub type MojoCreateSharedBufferFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoCreateSharedBufferOptions {
+    pub struct_size: u32,
+    pub flags: MojoCreateSharedBufferFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoCreateSharedBufferOptions",
+    ][::std::mem::size_of::<MojoCreateSharedBufferOptions>() - 8usize];
+    [
+        "Alignment of MojoCreateSharedBufferOptions",
+    ][::std::mem::align_of::<MojoCreateSharedBufferOptions>() - 8usize];
+    [
+        "Offset of field: MojoCreateSharedBufferOptions::struct_size",
+    ][::std::mem::offset_of!(MojoCreateSharedBufferOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoCreateSharedBufferOptions::flags",
+    ][::std::mem::offset_of!(MojoCreateSharedBufferOptions, flags) - 4usize];
+};
+pub type MojoGetBufferInfoFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoGetBufferInfoOptions {
+    pub struct_size: u32,
+    pub flags: MojoGetBufferInfoFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoGetBufferInfoOptions",
+    ][::std::mem::size_of::<MojoGetBufferInfoOptions>() - 8usize];
+    [
+        "Alignment of MojoGetBufferInfoOptions",
+    ][::std::mem::align_of::<MojoGetBufferInfoOptions>() - 8usize];
+    [
+        "Offset of field: MojoGetBufferInfoOptions::struct_size",
+    ][::std::mem::offset_of!(MojoGetBufferInfoOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoGetBufferInfoOptions::flags",
+    ][::std::mem::offset_of!(MojoGetBufferInfoOptions, flags) - 4usize];
+};
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSharedBufferInfo {
+    pub struct_size: u32,
+    pub size: u64,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoSharedBufferInfo",
+    ][::std::mem::size_of::<MojoSharedBufferInfo>() - 16usize];
+    [
+        "Alignment of MojoSharedBufferInfo",
+    ][::std::mem::align_of::<MojoSharedBufferInfo>() - 8usize];
+    [
+        "Offset of field: MojoSharedBufferInfo::struct_size",
+    ][::std::mem::offset_of!(MojoSharedBufferInfo, struct_size) - 0usize];
+    [
+        "Offset of field: MojoSharedBufferInfo::size",
+    ][::std::mem::offset_of!(MojoSharedBufferInfo, size) - 8usize];
+};
+pub type MojoDuplicateBufferHandleFlags = u32;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoDuplicateBufferHandleOptions {
+    pub struct_size: u32,
+    pub flags: MojoDuplicateBufferHandleFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoDuplicateBufferHandleOptions",
+    ][::std::mem::size_of::<MojoDuplicateBufferHandleOptions>() - 8usize];
+    [
+        "Alignment of MojoDuplicateBufferHandleOptions",
+    ][::std::mem::align_of::<MojoDuplicateBufferHandleOptions>() - 4usize];
+    [
+        "Offset of field: MojoDuplicateBufferHandleOptions::struct_size",
+    ][::std::mem::offset_of!(MojoDuplicateBufferHandleOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoDuplicateBufferHandleOptions::flags",
+    ][::std::mem::offset_of!(MojoDuplicateBufferHandleOptions, flags) - 4usize];
+};
+pub type MojoMapBufferFlags = u32;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoMapBufferOptions {
+    pub struct_size: u32,
+    pub flags: MojoMapBufferFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoMapBufferOptions",
+    ][::std::mem::size_of::<MojoMapBufferOptions>() - 8usize];
+    [
+        "Alignment of MojoMapBufferOptions",
+    ][::std::mem::align_of::<MojoMapBufferOptions>() - 4usize];
+    [
+        "Offset of field: MojoMapBufferOptions::struct_size",
+    ][::std::mem::offset_of!(MojoMapBufferOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoMapBufferOptions::flags",
+    ][::std::mem::offset_of!(MojoMapBufferOptions, flags) - 4usize];
+};
+pub type MojoCreateDataPipeFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoCreateDataPipeOptions {
+    pub struct_size: u32,
+    pub flags: MojoCreateDataPipeFlags,
+    pub element_num_bytes: u32,
+    pub capacity_num_bytes: u32,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoCreateDataPipeOptions",
+    ][::std::mem::size_of::<MojoCreateDataPipeOptions>() - 16usize];
+    [
+        "Alignment of MojoCreateDataPipeOptions",
+    ][::std::mem::align_of::<MojoCreateDataPipeOptions>() - 8usize];
+    [
+        "Offset of field: MojoCreateDataPipeOptions::struct_size",
+    ][::std::mem::offset_of!(MojoCreateDataPipeOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoCreateDataPipeOptions::flags",
+    ][::std::mem::offset_of!(MojoCreateDataPipeOptions, flags) - 4usize];
+    [
+        "Offset of field: MojoCreateDataPipeOptions::element_num_bytes",
+    ][::std::mem::offset_of!(MojoCreateDataPipeOptions, element_num_bytes) - 8usize];
+    [
+        "Offset of field: MojoCreateDataPipeOptions::capacity_num_bytes",
+    ][::std::mem::offset_of!(MojoCreateDataPipeOptions, capacity_num_bytes) - 12usize];
+};
+pub type MojoWriteDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoWriteDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoWriteDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoWriteDataOptions",
+    ][::std::mem::size_of::<MojoWriteDataOptions>() - 8usize];
+    [
+        "Alignment of MojoWriteDataOptions",
+    ][::std::mem::align_of::<MojoWriteDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoWriteDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoWriteDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoWriteDataOptions::flags",
+    ][::std::mem::offset_of!(MojoWriteDataOptions, flags) - 4usize];
+};
+pub type MojoBeginWriteDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoBeginWriteDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoBeginWriteDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoBeginWriteDataOptions",
+    ][::std::mem::size_of::<MojoBeginWriteDataOptions>() - 8usize];
+    [
+        "Alignment of MojoBeginWriteDataOptions",
+    ][::std::mem::align_of::<MojoBeginWriteDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoBeginWriteDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoBeginWriteDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoBeginWriteDataOptions::flags",
+    ][::std::mem::offset_of!(MojoBeginWriteDataOptions, flags) - 4usize];
+};
+pub type MojoEndWriteDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoEndWriteDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoEndWriteDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoEndWriteDataOptions",
+    ][::std::mem::size_of::<MojoEndWriteDataOptions>() - 8usize];
+    [
+        "Alignment of MojoEndWriteDataOptions",
+    ][::std::mem::align_of::<MojoEndWriteDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoEndWriteDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoEndWriteDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoEndWriteDataOptions::flags",
+    ][::std::mem::offset_of!(MojoEndWriteDataOptions, flags) - 4usize];
+};
+pub type MojoReadDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoReadDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoReadDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoReadDataOptions",
+    ][::std::mem::size_of::<MojoReadDataOptions>() - 8usize];
+    [
+        "Alignment of MojoReadDataOptions",
+    ][::std::mem::align_of::<MojoReadDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoReadDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoReadDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoReadDataOptions::flags",
+    ][::std::mem::offset_of!(MojoReadDataOptions, flags) - 4usize];
+};
+pub type MojoBeginReadDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoBeginReadDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoBeginReadDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoBeginReadDataOptions",
+    ][::std::mem::size_of::<MojoBeginReadDataOptions>() - 8usize];
+    [
+        "Alignment of MojoBeginReadDataOptions",
+    ][::std::mem::align_of::<MojoBeginReadDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoBeginReadDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoBeginReadDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoBeginReadDataOptions::flags",
+    ][::std::mem::offset_of!(MojoBeginReadDataOptions, flags) - 4usize];
+};
+pub type MojoEndReadDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoEndReadDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoEndReadDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoEndReadDataOptions",
+    ][::std::mem::size_of::<MojoEndReadDataOptions>() - 8usize];
+    [
+        "Alignment of MojoEndReadDataOptions",
+    ][::std::mem::align_of::<MojoEndReadDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoEndReadDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoEndReadDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoEndReadDataOptions::flags",
+    ][::std::mem::offset_of!(MojoEndReadDataOptions, flags) - 4usize];
+};
+pub type MojoPlatformHandleType = u32;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoPlatformHandle {
+    pub struct_size: u32,
+    pub type_: MojoPlatformHandleType,
+    pub value: u64,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoPlatformHandle",
+    ][::std::mem::size_of::<MojoPlatformHandle>() - 16usize];
+    [
+        "Alignment of MojoPlatformHandle",
+    ][::std::mem::align_of::<MojoPlatformHandle>() - 8usize];
+    [
+        "Offset of field: MojoPlatformHandle::struct_size",
+    ][::std::mem::offset_of!(MojoPlatformHandle, struct_size) - 0usize];
+    [
+        "Offset of field: MojoPlatformHandle::type_",
+    ][::std::mem::offset_of!(MojoPlatformHandle, type_) - 4usize];
+    [
+        "Offset of field: MojoPlatformHandle::value",
+    ][::std::mem::offset_of!(MojoPlatformHandle, value) - 8usize];
+};
+pub type MojoWrapPlatformHandleFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoWrapPlatformHandleOptions {
+    pub struct_size: u32,
+    pub flags: MojoWrapPlatformHandleFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoWrapPlatformHandleOptions",
+    ][::std::mem::size_of::<MojoWrapPlatformHandleOptions>() - 8usize];
+    [
+        "Alignment of MojoWrapPlatformHandleOptions",
+    ][::std::mem::align_of::<MojoWrapPlatformHandleOptions>() - 8usize];
+    [
+        "Offset of field: MojoWrapPlatformHandleOptions::struct_size",
+    ][::std::mem::offset_of!(MojoWrapPlatformHandleOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoWrapPlatformHandleOptions::flags",
+    ][::std::mem::offset_of!(MojoWrapPlatformHandleOptions, flags) - 4usize];
+};
+pub type MojoUnwrapPlatformHandleFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoUnwrapPlatformHandleOptions {
+    pub struct_size: u32,
+    pub flags: MojoUnwrapPlatformHandleFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoUnwrapPlatformHandleOptions",
+    ][::std::mem::size_of::<MojoUnwrapPlatformHandleOptions>() - 8usize];
+    [
+        "Alignment of MojoUnwrapPlatformHandleOptions",
+    ][::std::mem::align_of::<MojoUnwrapPlatformHandleOptions>() - 8usize];
+    [
+        "Offset of field: MojoUnwrapPlatformHandleOptions::struct_size",
+    ][::std::mem::offset_of!(MojoUnwrapPlatformHandleOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoUnwrapPlatformHandleOptions::flags",
+    ][::std::mem::offset_of!(MojoUnwrapPlatformHandleOptions, flags) - 4usize];
+};
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSharedBufferGuid {
+    pub high: u64,
+    pub low: u64,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoSharedBufferGuid",
+    ][::std::mem::size_of::<MojoSharedBufferGuid>() - 16usize];
+    [
+        "Alignment of MojoSharedBufferGuid",
+    ][::std::mem::align_of::<MojoSharedBufferGuid>() - 8usize];
+    [
+        "Offset of field: MojoSharedBufferGuid::high",
+    ][::std::mem::offset_of!(MojoSharedBufferGuid, high) - 0usize];
+    [
+        "Offset of field: MojoSharedBufferGuid::low",
+    ][::std::mem::offset_of!(MojoSharedBufferGuid, low) - 8usize];
+};
+pub type MojoPlatformSharedMemoryRegionAccessMode = u32;
+pub type MojoWrapPlatformSharedMemoryRegionFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoWrapPlatformSharedMemoryRegionOptions {
+    pub struct_size: u32,
+    pub flags: MojoWrapPlatformSharedMemoryRegionFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoWrapPlatformSharedMemoryRegionOptions",
+    ][::std::mem::size_of::<MojoWrapPlatformSharedMemoryRegionOptions>() - 8usize];
+    [
+        "Alignment of MojoWrapPlatformSharedMemoryRegionOptions",
+    ][::std::mem::align_of::<MojoWrapPlatformSharedMemoryRegionOptions>() - 8usize];
+    [
+        "Offset of field: MojoWrapPlatformSharedMemoryRegionOptions::struct_size",
+    ][::std::mem::offset_of!(MojoWrapPlatformSharedMemoryRegionOptions, struct_size)
+        - 0usize];
+    [
+        "Offset of field: MojoWrapPlatformSharedMemoryRegionOptions::flags",
+    ][::std::mem::offset_of!(MojoWrapPlatformSharedMemoryRegionOptions, flags) - 4usize];
+};
+pub type MojoUnwrapPlatformSharedMemoryRegionFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoUnwrapPlatformSharedMemoryRegionOptions {
+    pub struct_size: u32,
+    pub flags: MojoUnwrapPlatformSharedMemoryRegionFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoUnwrapPlatformSharedMemoryRegionOptions",
+    ][::std::mem::size_of::<MojoUnwrapPlatformSharedMemoryRegionOptions>() - 8usize];
+    [
+        "Alignment of MojoUnwrapPlatformSharedMemoryRegionOptions",
+    ][::std::mem::align_of::<MojoUnwrapPlatformSharedMemoryRegionOptions>() - 8usize];
+    [
+        "Offset of field: MojoUnwrapPlatformSharedMemoryRegionOptions::struct_size",
+    ][::std::mem::offset_of!(MojoUnwrapPlatformSharedMemoryRegionOptions, struct_size)
+        - 0usize];
+    [
+        "Offset of field: MojoUnwrapPlatformSharedMemoryRegionOptions::flags",
+    ][::std::mem::offset_of!(MojoUnwrapPlatformSharedMemoryRegionOptions, flags)
+        - 4usize];
+};
+pub type MojoProcessErrorFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoProcessErrorDetails {
+    pub struct_size: u32,
+    pub error_message_length: u32,
+    pub error_message: *const ::std::os::raw::c_char,
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
+    pub flags: MojoProcessErrorFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoProcessErrorDetails",
+    ][::std::mem::size_of::<MojoProcessErrorDetails>() - 24usize];
+    [
+        "Alignment of MojoProcessErrorDetails",
+    ][::std::mem::align_of::<MojoProcessErrorDetails>() - 8usize];
+    [
+        "Offset of field: MojoProcessErrorDetails::struct_size",
+    ][::std::mem::offset_of!(MojoProcessErrorDetails, struct_size) - 0usize];
+    [
+        "Offset of field: MojoProcessErrorDetails::error_message_length",
+    ][::std::mem::offset_of!(MojoProcessErrorDetails, error_message_length) - 4usize];
+    [
+        "Offset of field: MojoProcessErrorDetails::error_message",
+    ][::std::mem::offset_of!(MojoProcessErrorDetails, error_message) - 8usize];
+    [
+        "Offset of field: MojoProcessErrorDetails::flags",
+    ][::std::mem::offset_of!(MojoProcessErrorDetails, flags) - 16usize];
+};
+impl MojoProcessErrorDetails {
+    #[inline]
+    pub fn new_bitfield_1() -> __BindgenBitfieldUnit<[u8; 4usize]> {
+        ::std::default::Default::default()
+    }
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoPlatformProcessHandle {
+    pub struct_size: u32,
+    pub value: u64,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoPlatformProcessHandle",
+    ][::std::mem::size_of::<MojoPlatformProcessHandle>() - 16usize];
+    [
+        "Alignment of MojoPlatformProcessHandle",
+    ][::std::mem::align_of::<MojoPlatformProcessHandle>() - 8usize];
+    [
+        "Offset of field: MojoPlatformProcessHandle::struct_size",
+    ][::std::mem::offset_of!(MojoPlatformProcessHandle, struct_size) - 0usize];
+    [
+        "Offset of field: MojoPlatformProcessHandle::value",
+    ][::std::mem::offset_of!(MojoPlatformProcessHandle, value) - 8usize];
+};
+pub type MojoInvitationTransportType = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoInvitationTransportEndpoint {
+    pub struct_size: u32,
+    pub type_: MojoInvitationTransportType,
+    pub num_platform_handles: u32,
+    pub platform_handles: *const MojoPlatformHandle,
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
+    pub __bindgen_padding_0: u32,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoInvitationTransportEndpoint",
+    ][::std::mem::size_of::<MojoInvitationTransportEndpoint>() - 24usize];
+    [
+        "Alignment of MojoInvitationTransportEndpoint",
+    ][::std::mem::align_of::<MojoInvitationTransportEndpoint>() - 8usize];
+    [
+        "Offset of field: MojoInvitationTransportEndpoint::struct_size",
+    ][::std::mem::offset_of!(MojoInvitationTransportEndpoint, struct_size) - 0usize];
+    [
+        "Offset of field: MojoInvitationTransportEndpoint::type_",
+    ][::std::mem::offset_of!(MojoInvitationTransportEndpoint, type_) - 4usize];
+    [
+        "Offset of field: MojoInvitationTransportEndpoint::num_platform_handles",
+    ][::std::mem::offset_of!(MojoInvitationTransportEndpoint, num_platform_handles)
+        - 8usize];
+    [
+        "Offset of field: MojoInvitationTransportEndpoint::platform_handles",
+    ][::std::mem::offset_of!(MojoInvitationTransportEndpoint, platform_handles)
+        - 12usize];
+};
+impl MojoInvitationTransportEndpoint {
+    #[inline]
+    pub fn new_bitfield_1() -> __BindgenBitfieldUnit<[u8; 4usize]> {
+        ::std::default::Default::default()
+    }
+}
+pub type MojoCreateInvitationFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoCreateInvitationOptions {
+    pub struct_size: u32,
+    pub flags: MojoCreateInvitationFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoCreateInvitationOptions",
+    ][::std::mem::size_of::<MojoCreateInvitationOptions>() - 8usize];
+    [
+        "Alignment of MojoCreateInvitationOptions",
+    ][::std::mem::align_of::<MojoCreateInvitationOptions>() - 8usize];
+    [
+        "Offset of field: MojoCreateInvitationOptions::struct_size",
+    ][::std::mem::offset_of!(MojoCreateInvitationOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoCreateInvitationOptions::flags",
+    ][::std::mem::offset_of!(MojoCreateInvitationOptions, flags) - 4usize];
+};
+pub type MojoAttachMessagePipeToInvitationFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoAttachMessagePipeToInvitationOptions {
+    pub struct_size: u32,
+    pub flags: MojoAttachMessagePipeToInvitationFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoAttachMessagePipeToInvitationOptions",
+    ][::std::mem::size_of::<MojoAttachMessagePipeToInvitationOptions>() - 8usize];
+    [
+        "Alignment of MojoAttachMessagePipeToInvitationOptions",
+    ][::std::mem::align_of::<MojoAttachMessagePipeToInvitationOptions>() - 8usize];
+    [
+        "Offset of field: MojoAttachMessagePipeToInvitationOptions::struct_size",
+    ][::std::mem::offset_of!(MojoAttachMessagePipeToInvitationOptions, struct_size)
+        - 0usize];
+    [
+        "Offset of field: MojoAttachMessagePipeToInvitationOptions::flags",
+    ][::std::mem::offset_of!(MojoAttachMessagePipeToInvitationOptions, flags) - 4usize];
+};
+pub type MojoExtractMessagePipeFromInvitationFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoExtractMessagePipeFromInvitationOptions {
+    pub struct_size: u32,
+    pub flags: MojoExtractMessagePipeFromInvitationFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoExtractMessagePipeFromInvitationOptions",
+    ][::std::mem::size_of::<MojoExtractMessagePipeFromInvitationOptions>() - 8usize];
+    [
+        "Alignment of MojoExtractMessagePipeFromInvitationOptions",
+    ][::std::mem::align_of::<MojoExtractMessagePipeFromInvitationOptions>() - 8usize];
+    [
+        "Offset of field: MojoExtractMessagePipeFromInvitationOptions::struct_size",
+    ][::std::mem::offset_of!(MojoExtractMessagePipeFromInvitationOptions, struct_size)
+        - 0usize];
+    [
+        "Offset of field: MojoExtractMessagePipeFromInvitationOptions::flags",
+    ][::std::mem::offset_of!(MojoExtractMessagePipeFromInvitationOptions, flags)
+        - 4usize];
+};
+pub type MojoSendInvitationFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSendInvitationOptions {
+    pub struct_size: u32,
+    pub flags: MojoSendInvitationFlags,
+    pub isolated_connection_name: *const ::std::os::raw::c_char,
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
+    pub isolated_connection_name_length: u32,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoSendInvitationOptions",
+    ][::std::mem::size_of::<MojoSendInvitationOptions>() - 24usize];
+    [
+        "Alignment of MojoSendInvitationOptions",
+    ][::std::mem::align_of::<MojoSendInvitationOptions>() - 8usize];
+    [
+        "Offset of field: MojoSendInvitationOptions::struct_size",
+    ][::std::mem::offset_of!(MojoSendInvitationOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoSendInvitationOptions::flags",
+    ][::std::mem::offset_of!(MojoSendInvitationOptions, flags) - 4usize];
+    [
+        "Offset of field: MojoSendInvitationOptions::isolated_connection_name",
+    ][::std::mem::offset_of!(MojoSendInvitationOptions, isolated_connection_name)
+        - 8usize];
+    [
+        "Offset of field: MojoSendInvitationOptions::isolated_connection_name_length",
+    ][::std::mem::offset_of!(MojoSendInvitationOptions, isolated_connection_name_length)
+        - 16usize];
+};
+impl MojoSendInvitationOptions {
+    #[inline]
+    pub fn new_bitfield_1() -> __BindgenBitfieldUnit<[u8; 4usize]> {
+        ::std::default::Default::default()
+    }
+}
+pub type MojoAcceptInvitationFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoAcceptInvitationOptions {
+    pub struct_size: u32,
+    pub flags: MojoAcceptInvitationFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoAcceptInvitationOptions",
+    ][::std::mem::size_of::<MojoAcceptInvitationOptions>() - 8usize];
+    [
+        "Alignment of MojoAcceptInvitationOptions",
+    ][::std::mem::align_of::<MojoAcceptInvitationOptions>() - 8usize];
+    [
+        "Offset of field: MojoAcceptInvitationOptions::struct_size",
+    ][::std::mem::offset_of!(MojoAcceptInvitationOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoAcceptInvitationOptions::flags",
+    ][::std::mem::offset_of!(MojoAcceptInvitationOptions, flags) - 4usize];
+};
+pub type MojoSetDefaultProcessErrorHandlerFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSetDefaultProcessErrorHandlerOptions {
+    pub struct_size: u32,
+    pub flags: MojoSetDefaultProcessErrorHandlerFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoSetDefaultProcessErrorHandlerOptions",
+    ][::std::mem::size_of::<MojoSetDefaultProcessErrorHandlerOptions>() - 8usize];
+    [
+        "Alignment of MojoSetDefaultProcessErrorHandlerOptions",
+    ][::std::mem::align_of::<MojoSetDefaultProcessErrorHandlerOptions>() - 8usize];
+    [
+        "Offset of field: MojoSetDefaultProcessErrorHandlerOptions::struct_size",
+    ][::std::mem::offset_of!(MojoSetDefaultProcessErrorHandlerOptions, struct_size)
+        - 0usize];
+    [
+        "Offset of field: MojoSetDefaultProcessErrorHandlerOptions::flags",
+    ][::std::mem::offset_of!(MojoSetDefaultProcessErrorHandlerOptions, flags) - 4usize];
+};
+pub type MojoProcessErrorHandler = ::std::option::Option<
+    unsafe extern "C" fn(context: usize, details: *const MojoProcessErrorDetails),
+>;
+pub type MojoDefaultProcessErrorHandler = ::std::option::Option<
+    unsafe extern "C" fn(details: *const MojoProcessErrorDetails),
+>;
+pub type MojoMessageHandle = usize;
+pub type MojoCreateMessagePipeFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoCreateMessagePipeOptions {
+    pub struct_size: u32,
+    pub flags: MojoCreateMessagePipeFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoCreateMessagePipeOptions",
+    ][::std::mem::size_of::<MojoCreateMessagePipeOptions>() - 8usize];
+    [
+        "Alignment of MojoCreateMessagePipeOptions",
+    ][::std::mem::align_of::<MojoCreateMessagePipeOptions>() - 8usize];
+    [
+        "Offset of field: MojoCreateMessagePipeOptions::struct_size",
+    ][::std::mem::offset_of!(MojoCreateMessagePipeOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoCreateMessagePipeOptions::flags",
+    ][::std::mem::offset_of!(MojoCreateMessagePipeOptions, flags) - 4usize];
+};
+pub type MojoWriteMessageFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoWriteMessageOptions {
+    pub struct_size: u32,
+    pub flags: MojoWriteMessageFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoWriteMessageOptions",
+    ][::std::mem::size_of::<MojoWriteMessageOptions>() - 8usize];
+    [
+        "Alignment of MojoWriteMessageOptions",
+    ][::std::mem::align_of::<MojoWriteMessageOptions>() - 8usize];
+    [
+        "Offset of field: MojoWriteMessageOptions::struct_size",
+    ][::std::mem::offset_of!(MojoWriteMessageOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoWriteMessageOptions::flags",
+    ][::std::mem::offset_of!(MojoWriteMessageOptions, flags) - 4usize];
+};
+pub type MojoReadMessageFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoReadMessageOptions {
+    pub struct_size: u32,
+    pub flags: MojoReadMessageFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoReadMessageOptions",
+    ][::std::mem::size_of::<MojoReadMessageOptions>() - 8usize];
+    [
+        "Alignment of MojoReadMessageOptions",
+    ][::std::mem::align_of::<MojoReadMessageOptions>() - 8usize];
+    [
+        "Offset of field: MojoReadMessageOptions::struct_size",
+    ][::std::mem::offset_of!(MojoReadMessageOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoReadMessageOptions::flags",
+    ][::std::mem::offset_of!(MojoReadMessageOptions, flags) - 4usize];
+};
+pub type MojoFuseMessagePipesFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoFuseMessagePipesOptions {
+    pub struct_size: u32,
+    pub flags: MojoFuseMessagePipesFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoFuseMessagePipesOptions",
+    ][::std::mem::size_of::<MojoFuseMessagePipesOptions>() - 8usize];
+    [
+        "Alignment of MojoFuseMessagePipesOptions",
+    ][::std::mem::align_of::<MojoFuseMessagePipesOptions>() - 8usize];
+    [
+        "Offset of field: MojoFuseMessagePipesOptions::struct_size",
+    ][::std::mem::offset_of!(MojoFuseMessagePipesOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoFuseMessagePipesOptions::flags",
+    ][::std::mem::offset_of!(MojoFuseMessagePipesOptions, flags) - 4usize];
+};
+pub type MojoCreateMessageFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoCreateMessageOptions {
+    pub struct_size: u32,
+    pub flags: MojoCreateMessageFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoCreateMessageOptions",
+    ][::std::mem::size_of::<MojoCreateMessageOptions>() - 8usize];
+    [
+        "Alignment of MojoCreateMessageOptions",
+    ][::std::mem::align_of::<MojoCreateMessageOptions>() - 8usize];
+    [
+        "Offset of field: MojoCreateMessageOptions::struct_size",
+    ][::std::mem::offset_of!(MojoCreateMessageOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoCreateMessageOptions::flags",
+    ][::std::mem::offset_of!(MojoCreateMessageOptions, flags) - 4usize];
+};
+pub type MojoSerializeMessageFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSerializeMessageOptions {
+    pub struct_size: u32,
+    pub flags: MojoSerializeMessageFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoSerializeMessageOptions",
+    ][::std::mem::size_of::<MojoSerializeMessageOptions>() - 8usize];
+    [
+        "Alignment of MojoSerializeMessageOptions",
+    ][::std::mem::align_of::<MojoSerializeMessageOptions>() - 8usize];
+    [
+        "Offset of field: MojoSerializeMessageOptions::struct_size",
+    ][::std::mem::offset_of!(MojoSerializeMessageOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoSerializeMessageOptions::flags",
+    ][::std::mem::offset_of!(MojoSerializeMessageOptions, flags) - 4usize];
+};
+pub type MojoAppendMessageDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoAppendMessageDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoAppendMessageDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoAppendMessageDataOptions",
+    ][::std::mem::size_of::<MojoAppendMessageDataOptions>() - 8usize];
+    [
+        "Alignment of MojoAppendMessageDataOptions",
+    ][::std::mem::align_of::<MojoAppendMessageDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoAppendMessageDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoAppendMessageDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoAppendMessageDataOptions::flags",
+    ][::std::mem::offset_of!(MojoAppendMessageDataOptions, flags) - 4usize];
+};
+pub type MojoGetMessageDataFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoGetMessageDataOptions {
+    pub struct_size: u32,
+    pub flags: MojoGetMessageDataFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoGetMessageDataOptions",
+    ][::std::mem::size_of::<MojoGetMessageDataOptions>() - 8usize];
+    [
+        "Alignment of MojoGetMessageDataOptions",
+    ][::std::mem::align_of::<MojoGetMessageDataOptions>() - 8usize];
+    [
+        "Offset of field: MojoGetMessageDataOptions::struct_size",
+    ][::std::mem::offset_of!(MojoGetMessageDataOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoGetMessageDataOptions::flags",
+    ][::std::mem::offset_of!(MojoGetMessageDataOptions, flags) - 4usize];
+};
+pub type MojoSetMessageContextFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSetMessageContextOptions {
+    pub struct_size: u32,
+    pub flags: MojoSetMessageContextFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoSetMessageContextOptions",
+    ][::std::mem::size_of::<MojoSetMessageContextOptions>() - 8usize];
+    [
+        "Alignment of MojoSetMessageContextOptions",
+    ][::std::mem::align_of::<MojoSetMessageContextOptions>() - 8usize];
+    [
+        "Offset of field: MojoSetMessageContextOptions::struct_size",
+    ][::std::mem::offset_of!(MojoSetMessageContextOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoSetMessageContextOptions::flags",
+    ][::std::mem::offset_of!(MojoSetMessageContextOptions, flags) - 4usize];
+};
+pub type MojoGetMessageContextFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoGetMessageContextOptions {
+    pub struct_size: u32,
+    pub flags: MojoGetMessageContextFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoGetMessageContextOptions",
+    ][::std::mem::size_of::<MojoGetMessageContextOptions>() - 8usize];
+    [
+        "Alignment of MojoGetMessageContextOptions",
+    ][::std::mem::align_of::<MojoGetMessageContextOptions>() - 8usize];
+    [
+        "Offset of field: MojoGetMessageContextOptions::struct_size",
+    ][::std::mem::offset_of!(MojoGetMessageContextOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoGetMessageContextOptions::flags",
+    ][::std::mem::offset_of!(MojoGetMessageContextOptions, flags) - 4usize];
+};
+pub type MojoNotifyBadMessageFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoNotifyBadMessageOptions {
+    pub struct_size: u32,
+    pub flags: MojoNotifyBadMessageFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoNotifyBadMessageOptions",
+    ][::std::mem::size_of::<MojoNotifyBadMessageOptions>() - 8usize];
+    [
+        "Alignment of MojoNotifyBadMessageOptions",
+    ][::std::mem::align_of::<MojoNotifyBadMessageOptions>() - 8usize];
+    [
+        "Offset of field: MojoNotifyBadMessageOptions::struct_size",
+    ][::std::mem::offset_of!(MojoNotifyBadMessageOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoNotifyBadMessageOptions::flags",
+    ][::std::mem::offset_of!(MojoNotifyBadMessageOptions, flags) - 4usize];
+};
+pub type MojoMessageContextSerializer = ::std::option::Option<
+    unsafe extern "C" fn(message: MojoMessageHandle, context: usize),
+>;
+pub type MojoMessageContextDestructor = ::std::option::Option<
+    unsafe extern "C" fn(context: usize),
+>;
+pub type MojoSetQuotaFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSetQuotaOptions {
+    pub struct_size: u32,
+    pub flags: MojoSetQuotaFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoSetQuotaOptions",
+    ][::std::mem::size_of::<MojoSetQuotaOptions>() - 8usize];
+    [
+        "Alignment of MojoSetQuotaOptions",
+    ][::std::mem::align_of::<MojoSetQuotaOptions>() - 8usize];
+    [
+        "Offset of field: MojoSetQuotaOptions::struct_size",
+    ][::std::mem::offset_of!(MojoSetQuotaOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoSetQuotaOptions::flags",
+    ][::std::mem::offset_of!(MojoSetQuotaOptions, flags) - 4usize];
+};
+pub type MojoQueryQuotaFlags = u32;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoQueryQuotaOptions {
+    pub struct_size: u32,
+    pub flags: MojoQueryQuotaFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoQueryQuotaOptions",
+    ][::std::mem::size_of::<MojoQueryQuotaOptions>() - 8usize];
+    [
+        "Alignment of MojoQueryQuotaOptions",
+    ][::std::mem::align_of::<MojoQueryQuotaOptions>() - 8usize];
+    [
+        "Offset of field: MojoQueryQuotaOptions::struct_size",
+    ][::std::mem::offset_of!(MojoQueryQuotaOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoQueryQuotaOptions::flags",
+    ][::std::mem::offset_of!(MojoQueryQuotaOptions, flags) - 4usize];
+};
+pub type MojoQuotaType = u32;
+pub type MojoTrapEventFlags = u32;
+pub const MOJO_TRAP_EVENT_FLAG_NONE: MojoTrapEventFlags = 0;
+pub const MOJO_TRAP_EVENT_FLAG_WITHIN_API_CALL: MojoTrapEventFlags = 1;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoTrapEvent {
+    pub struct_size: u32,
+    pub flags: MojoTrapEventFlags,
+    pub trigger_context: usize,
+    pub _bitfield_align_1: [u8; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
+    pub result: MojoResult,
+    pub signals_state: MojoHandleSignalsState,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of MojoTrapEvent"][::std::mem::size_of::<MojoTrapEvent>() - 32usize];
+    ["Alignment of MojoTrapEvent"][::std::mem::align_of::<MojoTrapEvent>() - 8usize];
+    [
+        "Offset of field: MojoTrapEvent::struct_size",
+    ][::std::mem::offset_of!(MojoTrapEvent, struct_size) - 0usize];
+    [
+        "Offset of field: MojoTrapEvent::flags",
+    ][::std::mem::offset_of!(MojoTrapEvent, flags) - 4usize];
+    [
+        "Offset of field: MojoTrapEvent::trigger_context",
+    ][::std::mem::offset_of!(MojoTrapEvent, trigger_context) - 8usize];
+    [
+        "Offset of field: MojoTrapEvent::result",
+    ][::std::mem::offset_of!(MojoTrapEvent, result) - 16usize];
+    [
+        "Offset of field: MojoTrapEvent::signals_state",
+    ][::std::mem::offset_of!(MojoTrapEvent, signals_state) - 20usize];
+};
+impl MojoTrapEvent {
+    #[inline]
+    pub fn new_bitfield_1() -> __BindgenBitfieldUnit<[u8; 4usize]> {
+        ::std::default::Default::default()
+    }
+}
+pub type MojoTriggerCondition = u32;
+pub const MOJO_TRIGGER_CONDITION_SIGNALS_UNSATISFIED: MojoTriggerCondition = 0;
+pub const MOJO_TRIGGER_CONDITION_SIGNALS_SATISFIED: MojoTriggerCondition = 1;
+pub type MojoCreateTrapFlags = u32;
+pub const MOJO_CREATE_TRAP_FLAG_NONE: MojoCreateTrapFlags = 0;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoCreateTrapOptions {
+    pub struct_size: u32,
+    pub flags: MojoCreateTrapFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoCreateTrapOptions",
+    ][::std::mem::size_of::<MojoCreateTrapOptions>() - 8usize];
+    [
+        "Alignment of MojoCreateTrapOptions",
+    ][::std::mem::align_of::<MojoCreateTrapOptions>() - 8usize];
+    [
+        "Offset of field: MojoCreateTrapOptions::struct_size",
+    ][::std::mem::offset_of!(MojoCreateTrapOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoCreateTrapOptions::flags",
+    ][::std::mem::offset_of!(MojoCreateTrapOptions, flags) - 4usize];
+};
+pub type MojoAddTriggerFlags = u32;
+pub const MOJO_ADD_TRIGGER_FLAG_NONE: MojoAddTriggerFlags = 0;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoAddTriggerOptions {
+    pub struct_size: u32,
+    pub flags: MojoAddTriggerFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoAddTriggerOptions",
+    ][::std::mem::size_of::<MojoAddTriggerOptions>() - 8usize];
+    [
+        "Alignment of MojoAddTriggerOptions",
+    ][::std::mem::align_of::<MojoAddTriggerOptions>() - 8usize];
+    [
+        "Offset of field: MojoAddTriggerOptions::struct_size",
+    ][::std::mem::offset_of!(MojoAddTriggerOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoAddTriggerOptions::flags",
+    ][::std::mem::offset_of!(MojoAddTriggerOptions, flags) - 4usize];
+};
+pub type MojoRemoveTriggerFlags = u32;
+pub const MOJO_REMOVE_TRIGGER_FLAG_NONE: MojoRemoveTriggerFlags = 0;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoRemoveTriggerOptions {
+    pub struct_size: u32,
+    pub flags: MojoRemoveTriggerFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoRemoveTriggerOptions",
+    ][::std::mem::size_of::<MojoRemoveTriggerOptions>() - 8usize];
+    [
+        "Alignment of MojoRemoveTriggerOptions",
+    ][::std::mem::align_of::<MojoRemoveTriggerOptions>() - 8usize];
+    [
+        "Offset of field: MojoRemoveTriggerOptions::struct_size",
+    ][::std::mem::offset_of!(MojoRemoveTriggerOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoRemoveTriggerOptions::flags",
+    ][::std::mem::offset_of!(MojoRemoveTriggerOptions, flags) - 4usize];
+};
+pub type MojoArmTrapFlags = u32;
+pub const MOJO_ARM_TRAP_FLAG_NONE: MojoArmTrapFlags = 0;
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoArmTrapOptions {
+    pub struct_size: u32,
+    pub flags: MojoArmTrapFlags,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of MojoArmTrapOptions"][::std::mem::size_of::<MojoArmTrapOptions>() - 8usize];
+    [
+        "Alignment of MojoArmTrapOptions",
+    ][::std::mem::align_of::<MojoArmTrapOptions>() - 8usize];
+    [
+        "Offset of field: MojoArmTrapOptions::struct_size",
+    ][::std::mem::offset_of!(MojoArmTrapOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoArmTrapOptions::flags",
+    ][::std::mem::offset_of!(MojoArmTrapOptions, flags) - 4usize];
+};
+pub type MojoTrapEventHandler = ::std::option::Option<
+    unsafe extern "C" fn(event: *const MojoTrapEvent),
+>;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSystemThunks2 {
+    pub size: u32,
+    pub Initialize: ::std::option::Option<
+        unsafe extern "C" fn(options: *const MojoInitializeOptions) -> MojoResult,
+    >,
+    pub GetTimeTicksNow: ::std::option::Option<unsafe extern "C" fn() -> MojoTimeTicks>,
+    pub Close: ::std::option::Option<
+        unsafe extern "C" fn(handle: MojoHandle) -> MojoResult,
+    >,
+    pub QueryHandleSignalsState: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle: MojoHandle,
+            signals_state: *mut MojoHandleSignalsState,
+        ) -> MojoResult,
+    >,
+    pub CreateMessagePipe: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateMessagePipeOptions,
+            message_pipe_handle0: *mut MojoHandle,
+            message_pipe_handle1: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub WriteMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message_pipe_handle: MojoHandle,
+            message_handle: MojoMessageHandle,
+            options: *const MojoWriteMessageOptions,
+        ) -> MojoResult,
+    >,
+    pub ReadMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message_pipe_handle: MojoHandle,
+            options: *const MojoReadMessageOptions,
+            message_handle: *mut MojoMessageHandle,
+        ) -> MojoResult,
+    >,
+    pub FuseMessagePipes: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle0: MojoHandle,
+            handle1: MojoHandle,
+            options: *const MojoFuseMessagePipesOptions,
+        ) -> MojoResult,
+    >,
+    pub CreateMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateMessageOptions,
+            message: *mut MojoMessageHandle,
+        ) -> MojoResult,
+    >,
+    pub DestroyMessage: ::std::option::Option<
+        unsafe extern "C" fn(message: MojoMessageHandle) -> MojoResult,
+    >,
+    pub SerializeMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            options: *const MojoSerializeMessageOptions,
+        ) -> MojoResult,
+    >,
+    pub AppendMessageData: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            additional_payload_size: u32,
+            handles: *const MojoHandle,
+            num_handles: u32,
+            options: *const MojoAppendMessageDataOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+            buffer_size: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub GetMessageData: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            options: *const MojoGetMessageDataOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+            num_bytes: *mut u32,
+            handles: *mut MojoHandle,
+            num_handles: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub SetMessageContext: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            context: usize,
+            serializer: MojoMessageContextSerializer,
+            destructor: MojoMessageContextDestructor,
+            options: *const MojoSetMessageContextOptions,
+        ) -> MojoResult,
+    >,
+    pub GetMessageContext: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            options: *const MojoGetMessageContextOptions,
+            context: *mut usize,
+        ) -> MojoResult,
+    >,
+    pub NotifyBadMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            error: *const ::std::os::raw::c_char,
+            error_num_bytes: u32,
+            options: *const MojoNotifyBadMessageOptions,
+        ) -> MojoResult,
+    >,
+    pub CreateDataPipe: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateDataPipeOptions,
+            data_pipe_producer_handle: *mut MojoHandle,
+            data_pipe_consumer_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub WriteData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_producer_handle: MojoHandle,
+            elements: *const ::std::os::raw::c_void,
+            num_elements: *mut u32,
+            options: *const MojoWriteDataOptions,
+        ) -> MojoResult,
+    >,
+    pub BeginWriteData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_producer_handle: MojoHandle,
+            options: *const MojoBeginWriteDataOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+            buffer_num_elements: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub EndWriteData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_producer_handle: MojoHandle,
+            num_elements_written: u32,
+            options: *const MojoEndWriteDataOptions,
+        ) -> MojoResult,
+    >,
+    pub ReadData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_consumer_handle: MojoHandle,
+            options: *const MojoReadDataOptions,
+            elements: *mut ::std::os::raw::c_void,
+            num_elements: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub BeginReadData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_consumer_handle: MojoHandle,
+            options: *const MojoBeginReadDataOptions,
+            buffer: *mut *const ::std::os::raw::c_void,
+            buffer_num_elements: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub EndReadData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_consumer_handle: MojoHandle,
+            num_elements_read: u32,
+            options: *const MojoEndReadDataOptions,
+        ) -> MojoResult,
+    >,
+    pub CreateSharedBuffer: ::std::option::Option<
+        unsafe extern "C" fn(
+            num_bytes: u64,
+            options: *const MojoCreateSharedBufferOptions,
+            shared_buffer_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub DuplicateBufferHandle: ::std::option::Option<
+        unsafe extern "C" fn(
+            buffer_handle: MojoHandle,
+            options: *const MojoDuplicateBufferHandleOptions,
+            new_buffer_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub MapBuffer: ::std::option::Option<
+        unsafe extern "C" fn(
+            buffer_handle: MojoHandle,
+            offset: u64,
+            num_bytes: u64,
+            options: *const MojoMapBufferOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+        ) -> MojoResult,
+    >,
+    pub UnmapBuffer: ::std::option::Option<
+        unsafe extern "C" fn(buffer: *mut ::std::os::raw::c_void) -> MojoResult,
+    >,
+    pub GetBufferInfo: ::std::option::Option<
+        unsafe extern "C" fn(
+            buffer_handle: MojoHandle,
+            options: *const MojoGetBufferInfoOptions,
+            info: *mut MojoSharedBufferInfo,
+        ) -> MojoResult,
+    >,
+    pub CreateTrap: ::std::option::Option<
+        unsafe extern "C" fn(
+            handler: MojoTrapEventHandler,
+            options: *const MojoCreateTrapOptions,
+            trap_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub AddTrigger: ::std::option::Option<
+        unsafe extern "C" fn(
+            trap_handle: MojoHandle,
+            handle: MojoHandle,
+            signals: MojoHandleSignals,
+            condition: MojoTriggerCondition,
+            context: usize,
+            options: *const MojoAddTriggerOptions,
+        ) -> MojoResult,
+    >,
+    pub RemoveTrigger: ::std::option::Option<
+        unsafe extern "C" fn(
+            trap_handle: MojoHandle,
+            context: usize,
+            options: *const MojoRemoveTriggerOptions,
+        ) -> MojoResult,
+    >,
+    pub ArmTrap: ::std::option::Option<
+        unsafe extern "C" fn(
+            trap_handle: MojoHandle,
+            options: *const MojoArmTrapOptions,
+            num_blocking_events: *mut u32,
+            blocking_events: *mut MojoTrapEvent,
+        ) -> MojoResult,
+    >,
+    pub WrapPlatformHandle: ::std::option::Option<
+        unsafe extern "C" fn(
+            platform_handle: *const MojoPlatformHandle,
+            options: *const MojoWrapPlatformHandleOptions,
+            mojo_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub UnwrapPlatformHandle: ::std::option::Option<
+        unsafe extern "C" fn(
+            mojo_handle: MojoHandle,
+            options: *const MojoUnwrapPlatformHandleOptions,
+            platform_handle: *mut MojoPlatformHandle,
+        ) -> MojoResult,
+    >,
+    pub WrapPlatformSharedMemoryRegion: ::std::option::Option<
+        unsafe extern "C" fn(
+            platform_handles: *const MojoPlatformHandle,
+            num_platform_handles: u32,
+            num_bytes: u64,
+            guid: *const MojoSharedBufferGuid,
+            access_mode: MojoPlatformSharedMemoryRegionAccessMode,
+            options: *const MojoWrapPlatformSharedMemoryRegionOptions,
+            mojo_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub UnwrapPlatformSharedMemoryRegion: ::std::option::Option<
+        unsafe extern "C" fn(
+            mojo_handle: MojoHandle,
+            options: *const MojoUnwrapPlatformSharedMemoryRegionOptions,
+            platform_handles: *mut MojoPlatformHandle,
+            num_platform_handles: *mut u32,
+            num_bytes: *mut u64,
+            guid: *mut MojoSharedBufferGuid,
+            access_mode: *mut MojoPlatformSharedMemoryRegionAccessMode,
+        ) -> MojoResult,
+    >,
+    pub CreateInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateInvitationOptions,
+            invitation_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub AttachMessagePipeToInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            invitation_handle: MojoHandle,
+            name: *const ::std::os::raw::c_void,
+            name_num_bytes: u32,
+            options: *const MojoAttachMessagePipeToInvitationOptions,
+            message_pipe_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub ExtractMessagePipeFromInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            invitation_handle: MojoHandle,
+            name: *const ::std::os::raw::c_void,
+            name_num_bytes: u32,
+            options: *const MojoExtractMessagePipeFromInvitationOptions,
+            message_pipe_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub SendInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            invitation_handle: MojoHandle,
+            process_handle: *const MojoPlatformProcessHandle,
+            transport_endpoint: *const MojoInvitationTransportEndpoint,
+            error_handler: MojoProcessErrorHandler,
+            error_handler_context: usize,
+            options: *const MojoSendInvitationOptions,
+        ) -> MojoResult,
+    >,
+    pub AcceptInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            transport_endpoint: *const MojoInvitationTransportEndpoint,
+            options: *const MojoAcceptInvitationOptions,
+            invitation_handle: *mut MojoHandle,
+        ) -> MojoResult,
+    >,
+    pub SetQuota: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle: MojoHandle,
+            type_: MojoQuotaType,
+            limit: u64,
+            options: *const MojoSetQuotaOptions,
+        ) -> MojoResult,
+    >,
+    pub QueryQuota: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle: MojoHandle,
+            type_: MojoQuotaType,
+            options: *const MojoQueryQuotaOptions,
+            limit: *mut u64,
+            usage: *mut u64,
+        ) -> MojoResult,
+    >,
+    pub Shutdown: ::std::option::Option<
+        unsafe extern "C" fn(options: *const MojoShutdownOptions) -> MojoResult,
+    >,
+    pub SetDefaultProcessErrorHandler: ::std::option::Option<
+        unsafe extern "C" fn(
+            handler: MojoDefaultProcessErrorHandler,
+            options: *const MojoSetDefaultProcessErrorHandlerOptions,
+        ) -> MojoResult,
+    >,
+    pub ReserveMessageCapacity: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            payload_buffer_size: u32,
+            buffer_size: *mut u32,
+        ) -> MojoResult,
+    >,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of MojoSystemThunks2"][::std::mem::size_of::<MojoSystemThunks2>() - 188usize];
+    [
+        "Alignment of MojoSystemThunks2",
+    ][::std::mem::align_of::<MojoSystemThunks2>() - 4usize];
+    [
+        "Offset of field: MojoSystemThunks2::size",
+    ][::std::mem::offset_of!(MojoSystemThunks2, size) - 0usize];
+    [
+        "Offset of field: MojoSystemThunks2::Initialize",
+    ][::std::mem::offset_of!(MojoSystemThunks2, Initialize) - 4usize];
+    [
+        "Offset of field: MojoSystemThunks2::GetTimeTicksNow",
+    ][::std::mem::offset_of!(MojoSystemThunks2, GetTimeTicksNow) - 8usize];
+    [
+        "Offset of field: MojoSystemThunks2::Close",
+    ][::std::mem::offset_of!(MojoSystemThunks2, Close) - 12usize];
+    [
+        "Offset of field: MojoSystemThunks2::QueryHandleSignalsState",
+    ][::std::mem::offset_of!(MojoSystemThunks2, QueryHandleSignalsState) - 16usize];
+    [
+        "Offset of field: MojoSystemThunks2::CreateMessagePipe",
+    ][::std::mem::offset_of!(MojoSystemThunks2, CreateMessagePipe) - 20usize];
+    [
+        "Offset of field: MojoSystemThunks2::WriteMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks2, WriteMessage) - 24usize];
+    [
+        "Offset of field: MojoSystemThunks2::ReadMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks2, ReadMessage) - 28usize];
+    [
+        "Offset of field: MojoSystemThunks2::FuseMessagePipes",
+    ][::std::mem::offset_of!(MojoSystemThunks2, FuseMessagePipes) - 32usize];
+    [
+        "Offset of field: MojoSystemThunks2::CreateMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks2, CreateMessage) - 36usize];
+    [
+        "Offset of field: MojoSystemThunks2::DestroyMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks2, DestroyMessage) - 40usize];
+    [
+        "Offset of field: MojoSystemThunks2::SerializeMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks2, SerializeMessage) - 44usize];
+    [
+        "Offset of field: MojoSystemThunks2::AppendMessageData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, AppendMessageData) - 48usize];
+    [
+        "Offset of field: MojoSystemThunks2::GetMessageData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, GetMessageData) - 52usize];
+    [
+        "Offset of field: MojoSystemThunks2::SetMessageContext",
+    ][::std::mem::offset_of!(MojoSystemThunks2, SetMessageContext) - 56usize];
+    [
+        "Offset of field: MojoSystemThunks2::GetMessageContext",
+    ][::std::mem::offset_of!(MojoSystemThunks2, GetMessageContext) - 60usize];
+    [
+        "Offset of field: MojoSystemThunks2::NotifyBadMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks2, NotifyBadMessage) - 64usize];
+    [
+        "Offset of field: MojoSystemThunks2::CreateDataPipe",
+    ][::std::mem::offset_of!(MojoSystemThunks2, CreateDataPipe) - 68usize];
+    [
+        "Offset of field: MojoSystemThunks2::WriteData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, WriteData) - 72usize];
+    [
+        "Offset of field: MojoSystemThunks2::BeginWriteData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, BeginWriteData) - 76usize];
+    [
+        "Offset of field: MojoSystemThunks2::EndWriteData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, EndWriteData) - 80usize];
+    [
+        "Offset of field: MojoSystemThunks2::ReadData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, ReadData) - 84usize];
+    [
+        "Offset of field: MojoSystemThunks2::BeginReadData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, BeginReadData) - 88usize];
+    [
+        "Offset of field: MojoSystemThunks2::EndReadData",
+    ][::std::mem::offset_of!(MojoSystemThunks2, EndReadData) - 92usize];
+    [
+        "Offset of field: MojoSystemThunks2::CreateSharedBuffer",
+    ][::std::mem::offset_of!(MojoSystemThunks2, CreateSharedBuffer) - 96usize];
+    [
+        "Offset of field: MojoSystemThunks2::DuplicateBufferHandle",
+    ][::std::mem::offset_of!(MojoSystemThunks2, DuplicateBufferHandle) - 100usize];
+    [
+        "Offset of field: MojoSystemThunks2::MapBuffer",
+    ][::std::mem::offset_of!(MojoSystemThunks2, MapBuffer) - 104usize];
+    [
+        "Offset of field: MojoSystemThunks2::UnmapBuffer",
+    ][::std::mem::offset_of!(MojoSystemThunks2, UnmapBuffer) - 108usize];
+    [
+        "Offset of field: MojoSystemThunks2::GetBufferInfo",
+    ][::std::mem::offset_of!(MojoSystemThunks2, GetBufferInfo) - 112usize];
+    [
+        "Offset of field: MojoSystemThunks2::CreateTrap",
+    ][::std::mem::offset_of!(MojoSystemThunks2, CreateTrap) - 116usize];
+    [
+        "Offset of field: MojoSystemThunks2::AddTrigger",
+    ][::std::mem::offset_of!(MojoSystemThunks2, AddTrigger) - 120usize];
+    [
+        "Offset of field: MojoSystemThunks2::RemoveTrigger",
+    ][::std::mem::offset_of!(MojoSystemThunks2, RemoveTrigger) - 124usize];
+    [
+        "Offset of field: MojoSystemThunks2::ArmTrap",
+    ][::std::mem::offset_of!(MojoSystemThunks2, ArmTrap) - 128usize];
+    [
+        "Offset of field: MojoSystemThunks2::WrapPlatformHandle",
+    ][::std::mem::offset_of!(MojoSystemThunks2, WrapPlatformHandle) - 132usize];
+    [
+        "Offset of field: MojoSystemThunks2::UnwrapPlatformHandle",
+    ][::std::mem::offset_of!(MojoSystemThunks2, UnwrapPlatformHandle) - 136usize];
+    [
+        "Offset of field: MojoSystemThunks2::WrapPlatformSharedMemoryRegion",
+    ][::std::mem::offset_of!(MojoSystemThunks2, WrapPlatformSharedMemoryRegion)
+        - 140usize];
+    [
+        "Offset of field: MojoSystemThunks2::UnwrapPlatformSharedMemoryRegion",
+    ][::std::mem::offset_of!(MojoSystemThunks2, UnwrapPlatformSharedMemoryRegion)
+        - 144usize];
+    [
+        "Offset of field: MojoSystemThunks2::CreateInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks2, CreateInvitation) - 148usize];
+    [
+        "Offset of field: MojoSystemThunks2::AttachMessagePipeToInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks2, AttachMessagePipeToInvitation)
+        - 152usize];
+    [
+        "Offset of field: MojoSystemThunks2::ExtractMessagePipeFromInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks2, ExtractMessagePipeFromInvitation)
+        - 156usize];
+    [
+        "Offset of field: MojoSystemThunks2::SendInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks2, SendInvitation) - 160usize];
+    [
+        "Offset of field: MojoSystemThunks2::AcceptInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks2, AcceptInvitation) - 164usize];
+    [
+        "Offset of field: MojoSystemThunks2::SetQuota",
+    ][::std::mem::offset_of!(MojoSystemThunks2, SetQuota) - 168usize];
+    [
+        "Offset of field: MojoSystemThunks2::QueryQuota",
+    ][::std::mem::offset_of!(MojoSystemThunks2, QueryQuota) - 172usize];
+    [
+        "Offset of field: MojoSystemThunks2::Shutdown",
+    ][::std::mem::offset_of!(MojoSystemThunks2, Shutdown) - 176usize];
+    [
+        "Offset of field: MojoSystemThunks2::SetDefaultProcessErrorHandler",
+    ][::std::mem::offset_of!(MojoSystemThunks2, SetDefaultProcessErrorHandler)
+        - 180usize];
+    [
+        "Offset of field: MojoSystemThunks2::ReserveMessageCapacity",
+    ][::std::mem::offset_of!(MojoSystemThunks2, ReserveMessageCapacity) - 184usize];
+};
+pub type MojoHandle32 = u32;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoSystemThunks {
+    pub size: u32,
+    pub Initialize: ::std::option::Option<
+        unsafe extern "C" fn(options: *const MojoInitializeOptions) -> MojoResult,
+    >,
+    pub GetTimeTicksNow: ::std::option::Option<unsafe extern "C" fn() -> MojoTimeTicks>,
+    pub Close: ::std::option::Option<
+        unsafe extern "C" fn(handle: MojoHandle32) -> MojoResult,
+    >,
+    pub QueryHandleSignalsState: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle: MojoHandle32,
+            signals_state: *mut MojoHandleSignalsState,
+        ) -> MojoResult,
+    >,
+    pub CreateMessagePipe: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateMessagePipeOptions,
+            message_pipe_handle0: *mut MojoHandle32,
+            message_pipe_handle1: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub WriteMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message_pipe_handle: MojoHandle32,
+            message_handle: MojoMessageHandle,
+            options: *const MojoWriteMessageOptions,
+        ) -> MojoResult,
+    >,
+    pub ReadMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message_pipe_handle: MojoHandle32,
+            options: *const MojoReadMessageOptions,
+            message_handle: *mut MojoMessageHandle,
+        ) -> MojoResult,
+    >,
+    pub FuseMessagePipes: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle0: MojoHandle32,
+            handle1: MojoHandle32,
+            options: *const MojoFuseMessagePipesOptions,
+        ) -> MojoResult,
+    >,
+    pub CreateMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateMessageOptions,
+            message: *mut MojoMessageHandle,
+        ) -> MojoResult,
+    >,
+    pub DestroyMessage: ::std::option::Option<
+        unsafe extern "C" fn(message: MojoMessageHandle) -> MojoResult,
+    >,
+    pub SerializeMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            options: *const MojoSerializeMessageOptions,
+        ) -> MojoResult,
+    >,
+    pub AppendMessageData: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            additional_payload_size: u32,
+            handles: *const MojoHandle32,
+            num_handles: u32,
+            options: *const MojoAppendMessageDataOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+            buffer_size: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub GetMessageData: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            options: *const MojoGetMessageDataOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+            num_bytes: *mut u32,
+            handles: *mut MojoHandle32,
+            num_handles: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub SetMessageContext: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            context: usize,
+            serializer: MojoMessageContextSerializer,
+            destructor: MojoMessageContextDestructor,
+            options: *const MojoSetMessageContextOptions,
+        ) -> MojoResult,
+    >,
+    pub GetMessageContext: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            options: *const MojoGetMessageContextOptions,
+            context: *mut usize,
+        ) -> MojoResult,
+    >,
+    pub NotifyBadMessage: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            error: *const ::std::os::raw::c_char,
+            error_num_bytes: u32,
+            options: *const MojoNotifyBadMessageOptions,
+        ) -> MojoResult,
+    >,
+    pub CreateDataPipe: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateDataPipeOptions,
+            data_pipe_producer_handle: *mut MojoHandle32,
+            data_pipe_consumer_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub WriteData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_producer_handle: MojoHandle32,
+            elements: *const ::std::os::raw::c_void,
+            num_elements: *mut u32,
+            options: *const MojoWriteDataOptions,
+        ) -> MojoResult,
+    >,
+    pub BeginWriteData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_producer_handle: MojoHandle32,
+            options: *const MojoBeginWriteDataOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+            buffer_num_elements: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub EndWriteData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_producer_handle: MojoHandle32,
+            num_elements_written: u32,
+            options: *const MojoEndWriteDataOptions,
+        ) -> MojoResult,
+    >,
+    pub ReadData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_consumer_handle: MojoHandle32,
+            options: *const MojoReadDataOptions,
+            elements: *mut ::std::os::raw::c_void,
+            num_elements: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub BeginReadData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_consumer_handle: MojoHandle32,
+            options: *const MojoBeginReadDataOptions,
+            buffer: *mut *const ::std::os::raw::c_void,
+            buffer_num_elements: *mut u32,
+        ) -> MojoResult,
+    >,
+    pub EndReadData: ::std::option::Option<
+        unsafe extern "C" fn(
+            data_pipe_consumer_handle: MojoHandle32,
+            num_elements_read: u32,
+            options: *const MojoEndReadDataOptions,
+        ) -> MojoResult,
+    >,
+    pub CreateSharedBuffer: ::std::option::Option<
+        unsafe extern "C" fn(
+            num_bytes: u64,
+            options: *const MojoCreateSharedBufferOptions,
+            shared_buffer_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub DuplicateBufferHandle: ::std::option::Option<
+        unsafe extern "C" fn(
+            buffer_handle: MojoHandle32,
+            options: *const MojoDuplicateBufferHandleOptions,
+            new_buffer_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub MapBuffer: ::std::option::Option<
+        unsafe extern "C" fn(
+            buffer_handle: MojoHandle32,
+            offset: u64,
+            num_bytes: u64,
+            options: *const MojoMapBufferOptions,
+            buffer: *mut *mut ::std::os::raw::c_void,
+        ) -> MojoResult,
+    >,
+    pub UnmapBuffer: ::std::option::Option<
+        unsafe extern "C" fn(buffer: *mut ::std::os::raw::c_void) -> MojoResult,
+    >,
+    pub GetBufferInfo: ::std::option::Option<
+        unsafe extern "C" fn(
+            buffer_handle: MojoHandle32,
+            options: *const MojoGetBufferInfoOptions,
+            info: *mut MojoSharedBufferInfo,
+        ) -> MojoResult,
+    >,
+    pub CreateTrap: ::std::option::Option<
+        unsafe extern "C" fn(
+            handler: MojoTrapEventHandler,
+            options: *const MojoCreateTrapOptions,
+            trap_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub AddTrigger: ::std::option::Option<
+        unsafe extern "C" fn(
+            trap_handle: MojoHandle32,
+            handle: MojoHandle32,
+            signals: MojoHandleSignals,
+            condition: MojoTriggerCondition,
+            context: usize,
+            options: *const MojoAddTriggerOptions,
+        ) -> MojoResult,
+    >,
+    pub RemoveTrigger: ::std::option::Option<
+        unsafe extern "C" fn(
+            trap_handle: MojoHandle32,
+            context: usize,
+            options: *const MojoRemoveTriggerOptions,
+        ) -> MojoResult,
+    >,
+    pub ArmTrap: ::std::option::Option<
+        unsafe extern "C" fn(
+            trap_handle: MojoHandle32,
+            options: *const MojoArmTrapOptions,
+            num_blocking_events: *mut u32,
+            blocking_events: *mut MojoTrapEvent,
+        ) -> MojoResult,
+    >,
+    pub WrapPlatformHandle: ::std::option::Option<
+        unsafe extern "C" fn(
+            platform_handle: *const MojoPlatformHandle,
+            options: *const MojoWrapPlatformHandleOptions,
+            mojo_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub UnwrapPlatformHandle: ::std::option::Option<
+        unsafe extern "C" fn(
+            mojo_handle: MojoHandle32,
+            options: *const MojoUnwrapPlatformHandleOptions,
+            platform_handle: *mut MojoPlatformHandle,
+        ) -> MojoResult,
+    >,
+    pub WrapPlatformSharedMemoryRegion: ::std::option::Option<
+        unsafe extern "C" fn(
+            platform_handles: *const MojoPlatformHandle,
+            num_platform_handles: u32,
+            num_bytes: u64,
+            guid: *const MojoSharedBufferGuid,
+            access_mode: MojoPlatformSharedMemoryRegionAccessMode,
+            options: *const MojoWrapPlatformSharedMemoryRegionOptions,
+            mojo_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub UnwrapPlatformSharedMemoryRegion: ::std::option::Option<
+        unsafe extern "C" fn(
+            mojo_handle: MojoHandle32,
+            options: *const MojoUnwrapPlatformSharedMemoryRegionOptions,
+            platform_handles: *mut MojoPlatformHandle,
+            num_platform_handles: *mut u32,
+            num_bytes: *mut u64,
+            guid: *mut MojoSharedBufferGuid,
+            access_mode: *mut MojoPlatformSharedMemoryRegionAccessMode,
+        ) -> MojoResult,
+    >,
+    pub CreateInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoCreateInvitationOptions,
+            invitation_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub AttachMessagePipeToInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            invitation_handle: MojoHandle32,
+            name: *const ::std::os::raw::c_void,
+            name_num_bytes: u32,
+            options: *const MojoAttachMessagePipeToInvitationOptions,
+            message_pipe_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub ExtractMessagePipeFromInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            invitation_handle: MojoHandle32,
+            name: *const ::std::os::raw::c_void,
+            name_num_bytes: u32,
+            options: *const MojoExtractMessagePipeFromInvitationOptions,
+            message_pipe_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub SendInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            invitation_handle: MojoHandle32,
+            process_handle: *const MojoPlatformProcessHandle,
+            transport_endpoint: *const MojoInvitationTransportEndpoint,
+            error_handler: MojoProcessErrorHandler,
+            error_handler_context: usize,
+            options: *const MojoSendInvitationOptions,
+        ) -> MojoResult,
+    >,
+    pub AcceptInvitation: ::std::option::Option<
+        unsafe extern "C" fn(
+            transport_endpoint: *const MojoInvitationTransportEndpoint,
+            options: *const MojoAcceptInvitationOptions,
+            invitation_handle: *mut MojoHandle32,
+        ) -> MojoResult,
+    >,
+    pub SetQuota: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle: MojoHandle32,
+            type_: MojoQuotaType,
+            limit: u64,
+            options: *const MojoSetQuotaOptions,
+        ) -> MojoResult,
+    >,
+    pub QueryQuota: ::std::option::Option<
+        unsafe extern "C" fn(
+            handle: MojoHandle32,
+            type_: MojoQuotaType,
+            options: *const MojoQueryQuotaOptions,
+            limit: *mut u64,
+            usage: *mut u64,
+        ) -> MojoResult,
+    >,
+    pub Shutdown: ::std::option::Option<
+        unsafe extern "C" fn(options: *const MojoShutdownOptions) -> MojoResult,
+    >,
+    pub SetDefaultProcessErrorHandler: ::std::option::Option<
+        unsafe extern "C" fn(
+            handler: MojoDefaultProcessErrorHandler,
+            options: *const MojoSetDefaultProcessErrorHandlerOptions,
+        ) -> MojoResult,
+    >,
+    pub ReserveMessageCapacity: ::std::option::Option<
+        unsafe extern "C" fn(
+            message: MojoMessageHandle,
+            payload_buffer_size: u32,
+            buffer_size: *mut u32,
+        ) -> MojoResult,
+    >,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of MojoSystemThunks"][::std::mem::size_of::<MojoSystemThunks>() - 188usize];
+    [
+        "Alignment of MojoSystemThunks",
+    ][::std::mem::align_of::<MojoSystemThunks>() - 4usize];
+    [
+        "Offset of field: MojoSystemThunks::size",
+    ][::std::mem::offset_of!(MojoSystemThunks, size) - 0usize];
+    [
+        "Offset of field: MojoSystemThunks::Initialize",
+    ][::std::mem::offset_of!(MojoSystemThunks, Initialize) - 4usize];
+    [
+        "Offset of field: MojoSystemThunks::GetTimeTicksNow",
+    ][::std::mem::offset_of!(MojoSystemThunks, GetTimeTicksNow) - 8usize];
+    [
+        "Offset of field: MojoSystemThunks::Close",
+    ][::std::mem::offset_of!(MojoSystemThunks, Close) - 12usize];
+    [
+        "Offset of field: MojoSystemThunks::QueryHandleSignalsState",
+    ][::std::mem::offset_of!(MojoSystemThunks, QueryHandleSignalsState) - 16usize];
+    [
+        "Offset of field: MojoSystemThunks::CreateMessagePipe",
+    ][::std::mem::offset_of!(MojoSystemThunks, CreateMessagePipe) - 20usize];
+    [
+        "Offset of field: MojoSystemThunks::WriteMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks, WriteMessage) - 24usize];
+    [
+        "Offset of field: MojoSystemThunks::ReadMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks, ReadMessage) - 28usize];
+    [
+        "Offset of field: MojoSystemThunks::FuseMessagePipes",
+    ][::std::mem::offset_of!(MojoSystemThunks, FuseMessagePipes) - 32usize];
+    [
+        "Offset of field: MojoSystemThunks::CreateMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks, CreateMessage) - 36usize];
+    [
+        "Offset of field: MojoSystemThunks::DestroyMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks, DestroyMessage) - 40usize];
+    [
+        "Offset of field: MojoSystemThunks::SerializeMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks, SerializeMessage) - 44usize];
+    [
+        "Offset of field: MojoSystemThunks::AppendMessageData",
+    ][::std::mem::offset_of!(MojoSystemThunks, AppendMessageData) - 48usize];
+    [
+        "Offset of field: MojoSystemThunks::GetMessageData",
+    ][::std::mem::offset_of!(MojoSystemThunks, GetMessageData) - 52usize];
+    [
+        "Offset of field: MojoSystemThunks::SetMessageContext",
+    ][::std::mem::offset_of!(MojoSystemThunks, SetMessageContext) - 56usize];
+    [
+        "Offset of field: MojoSystemThunks::GetMessageContext",
+    ][::std::mem::offset_of!(MojoSystemThunks, GetMessageContext) - 60usize];
+    [
+        "Offset of field: MojoSystemThunks::NotifyBadMessage",
+    ][::std::mem::offset_of!(MojoSystemThunks, NotifyBadMessage) - 64usize];
+    [
+        "Offset of field: MojoSystemThunks::CreateDataPipe",
+    ][::std::mem::offset_of!(MojoSystemThunks, CreateDataPipe) - 68usize];
+    [
+        "Offset of field: MojoSystemThunks::WriteData",
+    ][::std::mem::offset_of!(MojoSystemThunks, WriteData) - 72usize];
+    [
+        "Offset of field: MojoSystemThunks::BeginWriteData",
+    ][::std::mem::offset_of!(MojoSystemThunks, BeginWriteData) - 76usize];
+    [
+        "Offset of field: MojoSystemThunks::EndWriteData",
+    ][::std::mem::offset_of!(MojoSystemThunks, EndWriteData) - 80usize];
+    [
+        "Offset of field: MojoSystemThunks::ReadData",
+    ][::std::mem::offset_of!(MojoSystemThunks, ReadData) - 84usize];
+    [
+        "Offset of field: MojoSystemThunks::BeginReadData",
+    ][::std::mem::offset_of!(MojoSystemThunks, BeginReadData) - 88usize];
+    [
+        "Offset of field: MojoSystemThunks::EndReadData",
+    ][::std::mem::offset_of!(MojoSystemThunks, EndReadData) - 92usize];
+    [
+        "Offset of field: MojoSystemThunks::CreateSharedBuffer",
+    ][::std::mem::offset_of!(MojoSystemThunks, CreateSharedBuffer) - 96usize];
+    [
+        "Offset of field: MojoSystemThunks::DuplicateBufferHandle",
+    ][::std::mem::offset_of!(MojoSystemThunks, DuplicateBufferHandle) - 100usize];
+    [
+        "Offset of field: MojoSystemThunks::MapBuffer",
+    ][::std::mem::offset_of!(MojoSystemThunks, MapBuffer) - 104usize];
+    [
+        "Offset of field: MojoSystemThunks::UnmapBuffer",
+    ][::std::mem::offset_of!(MojoSystemThunks, UnmapBuffer) - 108usize];
+    [
+        "Offset of field: MojoSystemThunks::GetBufferInfo",
+    ][::std::mem::offset_of!(MojoSystemThunks, GetBufferInfo) - 112usize];
+    [
+        "Offset of field: MojoSystemThunks::CreateTrap",
+    ][::std::mem::offset_of!(MojoSystemThunks, CreateTrap) - 116usize];
+    [
+        "Offset of field: MojoSystemThunks::AddTrigger",
+    ][::std::mem::offset_of!(MojoSystemThunks, AddTrigger) - 120usize];
+    [
+        "Offset of field: MojoSystemThunks::RemoveTrigger",
+    ][::std::mem::offset_of!(MojoSystemThunks, RemoveTrigger) - 124usize];
+    [
+        "Offset of field: MojoSystemThunks::ArmTrap",
+    ][::std::mem::offset_of!(MojoSystemThunks, ArmTrap) - 128usize];
+    [
+        "Offset of field: MojoSystemThunks::WrapPlatformHandle",
+    ][::std::mem::offset_of!(MojoSystemThunks, WrapPlatformHandle) - 132usize];
+    [
+        "Offset of field: MojoSystemThunks::UnwrapPlatformHandle",
+    ][::std::mem::offset_of!(MojoSystemThunks, UnwrapPlatformHandle) - 136usize];
+    [
+        "Offset of field: MojoSystemThunks::WrapPlatformSharedMemoryRegion",
+    ][::std::mem::offset_of!(MojoSystemThunks, WrapPlatformSharedMemoryRegion)
+        - 140usize];
+    [
+        "Offset of field: MojoSystemThunks::UnwrapPlatformSharedMemoryRegion",
+    ][::std::mem::offset_of!(MojoSystemThunks, UnwrapPlatformSharedMemoryRegion)
+        - 144usize];
+    [
+        "Offset of field: MojoSystemThunks::CreateInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks, CreateInvitation) - 148usize];
+    [
+        "Offset of field: MojoSystemThunks::AttachMessagePipeToInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks, AttachMessagePipeToInvitation)
+        - 152usize];
+    [
+        "Offset of field: MojoSystemThunks::ExtractMessagePipeFromInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks, ExtractMessagePipeFromInvitation)
+        - 156usize];
+    [
+        "Offset of field: MojoSystemThunks::SendInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks, SendInvitation) - 160usize];
+    [
+        "Offset of field: MojoSystemThunks::AcceptInvitation",
+    ][::std::mem::offset_of!(MojoSystemThunks, AcceptInvitation) - 164usize];
+    [
+        "Offset of field: MojoSystemThunks::SetQuota",
+    ][::std::mem::offset_of!(MojoSystemThunks, SetQuota) - 168usize];
+    [
+        "Offset of field: MojoSystemThunks::QueryQuota",
+    ][::std::mem::offset_of!(MojoSystemThunks, QueryQuota) - 172usize];
+    [
+        "Offset of field: MojoSystemThunks::Shutdown",
+    ][::std::mem::offset_of!(MojoSystemThunks, Shutdown) - 176usize];
+    [
+        "Offset of field: MojoSystemThunks::SetDefaultProcessErrorHandler",
+    ][::std::mem::offset_of!(MojoSystemThunks, SetDefaultProcessErrorHandler)
+        - 180usize];
+    [
+        "Offset of field: MojoSystemThunks::ReserveMessageCapacity",
+    ][::std::mem::offset_of!(MojoSystemThunks, ReserveMessageCapacity) - 184usize];
+};
+pub type MojoSystemThunks32 = MojoSystemThunks;
+pub type MojoRsStatus = u32;
+pub type MojoRsHandle = usize;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoRsTaskRunner {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoRsChild {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoRsListener {
+    _unused: [u8; 0],
+}
+pub type MojoRsTaskCallback = ::std::option::Option<
+    unsafe extern "C" fn(context: *mut ::std::os::raw::c_void),
+>;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoRsInitOptions {
+    pub struct_size: u32,
+    pub is_broker: u32,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of MojoRsInitOptions"][::std::mem::size_of::<MojoRsInitOptions>() - 8usize];
+    [
+        "Alignment of MojoRsInitOptions",
+    ][::std::mem::align_of::<MojoRsInitOptions>() - 4usize];
+    [
+        "Offset of field: MojoRsInitOptions::struct_size",
+    ][::std::mem::offset_of!(MojoRsInitOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoRsInitOptions::is_broker",
+    ][::std::mem::offset_of!(MojoRsInitOptions, is_broker) - 4usize];
+};
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoRsSpawnOptions {
+    pub struct_size: u32,
+    pub program: *const ::std::os::raw::c_char,
+    pub args: *const *const ::std::os::raw::c_char,
+    pub args_len: usize,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    [
+        "Size of MojoRsSpawnOptions",
+    ][::std::mem::size_of::<MojoRsSpawnOptions>() - 16usize];
+    [
+        "Alignment of MojoRsSpawnOptions",
+    ][::std::mem::align_of::<MojoRsSpawnOptions>() - 4usize];
+    [
+        "Offset of field: MojoRsSpawnOptions::struct_size",
+    ][::std::mem::offset_of!(MojoRsSpawnOptions, struct_size) - 0usize];
+    [
+        "Offset of field: MojoRsSpawnOptions::program",
+    ][::std::mem::offset_of!(MojoRsSpawnOptions, program) - 4usize];
+    [
+        "Offset of field: MojoRsSpawnOptions::args",
+    ][::std::mem::offset_of!(MojoRsSpawnOptions, args) - 8usize];
+    [
+        "Offset of field: MojoRsSpawnOptions::args_len",
+    ][::std::mem::offset_of!(MojoRsSpawnOptions, args_len) - 12usize];
+};
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct MojoRsApiV1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub chromium_commit: *const ::std::os::raw::c_char,
+    pub runtime_init: ::std::option::Option<
+        unsafe extern "C" fn(options: *const MojoRsInitOptions) -> MojoRsStatus,
+    >,
+    pub system_thunks: ::std::option::Option<
+        unsafe extern "C" fn() -> *const ::std::os::raw::c_void,
+    >,
+    pub dispatch_runner: ::std::option::Option<
+        unsafe extern "C" fn() -> *mut MojoRsTaskRunner,
+    >,
+    pub current_runner: ::std::option::Option<
+        unsafe extern "C" fn() -> *mut MojoRsTaskRunner,
+    >,
+    pub runner_retain: ::std::option::Option<
+        unsafe extern "C" fn(runner: *mut MojoRsTaskRunner),
+    >,
+    pub runner_release: ::std::option::Option<
+        unsafe extern "C" fn(runner: *mut MojoRsTaskRunner),
+    >,
+    pub runner_is_current: ::std::option::Option<
+        unsafe extern "C" fn(runner: *const MojoRsTaskRunner) -> u32,
+    >,
+    pub runner_post: ::std::option::Option<
+        unsafe extern "C" fn(
+            runner: *mut MojoRsTaskRunner,
+            context: *mut ::std::os::raw::c_void,
+            run: MojoRsTaskCallback,
+            cancel: MojoRsTaskCallback,
+        ) -> MojoRsStatus,
+    >,
+    pub time_ticks_now_micros: ::std::option::Option<unsafe extern "C" fn() -> i64>,
+    pub next_trace_id: ::std::option::Option<unsafe extern "C" fn() -> u64>,
+    pub spawn_child: ::std::option::Option<
+        unsafe extern "C" fn(
+            options: *const MojoRsSpawnOptions,
+            bootstrap_pipe: *mut MojoRsHandle,
+            child: *mut *mut MojoRsChild,
+        ) -> MojoRsStatus,
+    >,
+    pub accept_inherited: ::std::option::Option<
+        unsafe extern "C" fn(
+            token: *const ::std::os::raw::c_char,
+            bootstrap_pipe: *mut MojoRsHandle,
+        ) -> MojoRsStatus,
+    >,
+    pub child_wait: ::std::option::Option<
+        unsafe extern "C" fn(
+            child: *mut MojoRsChild,
+            timeout_ms: u64,
+            exit_code: *mut i32,
+        ) -> MojoRsStatus,
+    >,
+    pub child_release: ::std::option::Option<
+        unsafe extern "C" fn(child: *mut MojoRsChild),
+    >,
+    pub listen_once: ::std::option::Option<
+        unsafe extern "C" fn(
+            name: *const ::std::os::raw::c_char,
+            listener: *mut *mut MojoRsListener,
+        ) -> MojoRsStatus,
+    >,
+    pub listener_accept: ::std::option::Option<
+        unsafe extern "C" fn(
+            listener: *mut MojoRsListener,
+            peer_pid: u64,
+            timeout_ms: u64,
+            bootstrap_pipe: *mut MojoRsHandle,
+        ) -> MojoRsStatus,
+    >,
+    pub listener_release: ::std::option::Option<
+        unsafe extern "C" fn(listener: *mut MojoRsListener),
+    >,
+    pub connect_named: ::std::option::Option<
+        unsafe extern "C" fn(
+            name: *const ::std::os::raw::c_char,
+            bootstrap_pipe: *mut MojoRsHandle,
+        ) -> MojoRsStatus,
+    >,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of MojoRsApiV1"][::std::mem::size_of::<MojoRsApiV1>() - 84usize];
+    ["Alignment of MojoRsApiV1"][::std::mem::align_of::<MojoRsApiV1>() - 4usize];
+    [
+        "Offset of field: MojoRsApiV1::struct_size",
+    ][::std::mem::offset_of!(MojoRsApiV1, struct_size) - 0usize];
+    [
+        "Offset of field: MojoRsApiV1::abi_version",
+    ][::std::mem::offset_of!(MojoRsApiV1, abi_version) - 4usize];
+    [
+        "Offset of field: MojoRsApiV1::chromium_commit",
+    ][::std::mem::offset_of!(MojoRsApiV1, chromium_commit) - 8usize];
+    [
+        "Offset of field: MojoRsApiV1::runtime_init",
+    ][::std::mem::offset_of!(MojoRsApiV1, runtime_init) - 12usize];
+    [
+        "Offset of field: MojoRsApiV1::system_thunks",
+    ][::std::mem::offset_of!(MojoRsApiV1, system_thunks) - 16usize];
+    [
+        "Offset of field: MojoRsApiV1::dispatch_runner",
+    ][::std::mem::offset_of!(MojoRsApiV1, dispatch_runner) - 20usize];
+    [
+        "Offset of field: MojoRsApiV1::current_runner",
+    ][::std::mem::offset_of!(MojoRsApiV1, current_runner) - 24usize];
+    [
+        "Offset of field: MojoRsApiV1::runner_retain",
+    ][::std::mem::offset_of!(MojoRsApiV1, runner_retain) - 28usize];
+    [
+        "Offset of field: MojoRsApiV1::runner_release",
+    ][::std::mem::offset_of!(MojoRsApiV1, runner_release) - 32usize];
+    [
+        "Offset of field: MojoRsApiV1::runner_is_current",
+    ][::std::mem::offset_of!(MojoRsApiV1, runner_is_current) - 36usize];
+    [
+        "Offset of field: MojoRsApiV1::runner_post",
+    ][::std::mem::offset_of!(MojoRsApiV1, runner_post) - 40usize];
+    [
+        "Offset of field: MojoRsApiV1::time_ticks_now_micros",
+    ][::std::mem::offset_of!(MojoRsApiV1, time_ticks_now_micros) - 44usize];
+    [
+        "Offset of field: MojoRsApiV1::next_trace_id",
+    ][::std::mem::offset_of!(MojoRsApiV1, next_trace_id) - 48usize];
+    [
+        "Offset of field: MojoRsApiV1::spawn_child",
+    ][::std::mem::offset_of!(MojoRsApiV1, spawn_child) - 52usize];
+    [
+        "Offset of field: MojoRsApiV1::accept_inherited",
+    ][::std::mem::offset_of!(MojoRsApiV1, accept_inherited) - 56usize];
+    [
+        "Offset of field: MojoRsApiV1::child_wait",
+    ][::std::mem::offset_of!(MojoRsApiV1, child_wait) - 60usize];
+    [
+        "Offset of field: MojoRsApiV1::child_release",
+    ][::std::mem::offset_of!(MojoRsApiV1, child_release) - 64usize];
+    [
+        "Offset of field: MojoRsApiV1::listen_once",
+    ][::std::mem::offset_of!(MojoRsApiV1, listen_once) - 68usize];
+    [
+        "Offset of field: MojoRsApiV1::listener_accept",
+    ][::std::mem::offset_of!(MojoRsApiV1, listener_accept) - 72usize];
+    [
+        "Offset of field: MojoRsApiV1::listener_release",
+    ][::std::mem::offset_of!(MojoRsApiV1, listener_release) - 76usize];
+    [
+        "Offset of field: MojoRsApiV1::connect_named",
+    ][::std::mem::offset_of!(MojoRsApiV1, connect_named) - 80usize];
+};
