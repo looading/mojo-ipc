@@ -19,6 +19,7 @@ import sys
 
 
 from chromium_source import OFFICIAL_COMMIT as COMMIT, add_revision_argument
+import windows7_profile
 LABEL = "//sdk/mojo_rs/native:runtime"
 MARKER = ".mojo-rust-sdk-overlay"
 
@@ -123,6 +124,12 @@ def main() -> int:
     # 安装后手动执行 GN 时，默认版本也必须与当前 checkout 相同。
     gn_file = overlay / "BUILD.gn"
     gn_file.write_text(gn_file.read_text(encoding="utf-8").replace(COMMIT, args.chromium_revision), encoding="utf-8")
+    (overlay / "windows7_profile_config.h").write_text(
+        "// Generated native API profile.\n#define MOJO_RS_WINDOWS7_ENTROPY_PROFILE " + ("1" if args.windows7 else "0") + "\n", encoding="utf-8")
+    if args.windows7:
+        profile_gni = overlay / "windows7_compat.gni"
+        profile_gni.write_text(profile_gni.read_text().replace("mojo_rs_windows7_compat = false", "mojo_rs_windows7_compat = true"))
+    source_patches = windows7_profile.apply(checkout) if args.windows7 else []
     (overlay / MARKER).write_text(args.chromium_revision + "\n", encoding="utf-8")
     print(f"Installed overlay: {overlay}")
     if not args.build and not args.smoke:
@@ -183,7 +190,7 @@ def main() -> int:
             "runtime_dependency_audit": "required before redistribution",
         }
         if args.windows7:
-            manifest.update(windows_api_profile="win7-sp1", minimum_windows_build=7601,
+            manifest.update(windows_api_profile="win7-sp1", windows_entropy_backend="bcrypt", chromium_source_patches=source_patches, minimum_windows_build=7601,
                             win7_runtime_verified=False)
         (dest / "native-manifest.json").write_text(
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

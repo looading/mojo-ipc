@@ -1,0 +1,3 @@
+declare_args() {
+  mojo_rs_windows7_compat = false
+}

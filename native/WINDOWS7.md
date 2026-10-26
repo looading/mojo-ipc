@@ -9,7 +9,12 @@ The profile removes the normal console subsystem configuration and links PE OS
 and subsystem versions6.1. Module-local x64 import-pointer definitions resolve
 GetSystemTimePreciseAsFileTime to GetSystemTimeAsFileTime. SetThreadInformation
 returns FALSE/ERROR_NOT_SUPPORTED because memory/EcoQoS hints are optional and
-unavailable; it never reports a successful change. IPC, allocator, process and
+unavailable; it never reports a successful change. The explicit profile also adapts Chromium base and BoringSSL entropy to the
+existing BCryptGenRandom system-preferred CNG backend, failing closed on error.
+It never falls back to weak randomness or requires bcryptprimitives on Win7.
+This profile runs in ordinary desktop processes, not a restricted Chromium sandbox.
+The managed adapter records source hashes; default modern builds retain the original
+entropy behavior. IPC, allocator, process and
 shutdown code remain the native Chromium implementation. Wallclock precision is
 lower; interval measurements continue to use the existing monotonic clock.
 

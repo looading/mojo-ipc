@@ -2,10 +2,9 @@
 # Install at //sdk/mojo_rs/native with scripts/build_native.py.
 
 import("//base/allocator/allocator.gni")
+import("windows7_compat.gni")
 
 declare_args() {
-  # 显式生成 Win7 SP1 x64 API 配置；默认现代运行库保持不变。
-  mojo_rs_windows7_compat = false
   mojo_rs_chromium_commit = "bcbc09a9f8e4c3fd3ad2ed9cbad41e63c35ccfdd"
 }
 

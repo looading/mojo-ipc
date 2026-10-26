@@ -39,7 +39,7 @@ class ChromiumConfigurationTests(unittest.TestCase):
             argv = ["build_native.py", "--chromium-src", str(checkout), "--chromium-revision", CUSTOM,
                     "--out", str(out), "--build", "--target-os", "win", "--target-cpu", "x64",
                     "--windows7", "--artifact-dir", str(artifact)]
-            with patch.object(sys, "argv", argv), patch.object(build, "checked", return_value=CUSTOM), patch.object(build.platform, "system", return_value="Darwin"), patch.object(build, "tool", side_effect=lambda name:name), patch.object(build.shutil, "which", return_value=None), patch.object(build.subprocess, "run") as run, contextlib.redirect_stdout(io.StringIO()):
+            with patch.object(sys, "argv", argv), patch.object(build, "checked", return_value=CUSTOM), patch.object(build.platform, "system", return_value="Darwin"), patch.object(build, "tool", side_effect=lambda name:name), patch.object(build.shutil, "which", return_value=None), patch.object(build.windows7_profile, "apply", return_value=[]), patch.object(build.subprocess, "run") as run, contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(build.main(), 0)
             self.assertIn("mojo_rs_windows7_compat=true", run.call_args_list[0].args[0][-4])
             manifest = json.loads((artifact / "native-manifest.json").read_text())
@@ -47,6 +47,17 @@ class ChromiumConfigurationTests(unittest.TestCase):
             self.assertFalse(manifest["win7_runtime_verified"])
             self.assertFalse(manifest["native_smoke_passed"])
             self.assertTrue((checkout / "sdk/mojo_rs/native/windows7_compat.cc").is_file())
+
+    def test_windows7_install_only_keeps_the_selected_profile_in_the_overlay(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            checkout = Path(temporary)
+            (checkout / ".gn").write_text("")
+            argv = ["build_native.py", "--chromium-src", str(checkout), "--chromium-revision", CUSTOM, "--target-os", "win", "--target-cpu", "x64", "--windows7"]
+            with patch.object(sys, "argv", argv), patch.object(build, "checked", return_value=CUSTOM), patch.object(build.windows7_profile, "apply", return_value=[]), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(build.main(), 0)
+            overlay = checkout / "sdk/mojo_rs/native"
+            self.assertIn("mojo_rs_windows7_compat = true", (overlay / "windows7_compat.gni").read_text())
+            self.assertIn("MOJO_RS_WINDOWS7_ENTROPY_PROFILE 1", (overlay / "windows7_profile_config.h").read_text())
 
     def test_windows7_profile_rejects_non_windows_targets_before_mutating(self):
         with patch.object(sys, "argv", ["build_native.py", "--chromium-src", "/not-used", "--target-os", "mac", "--target-cpu", "arm64", "--windows7"]), contextlib.redirect_stderr(io.StringIO()):
@@ -73,7 +84,7 @@ class ChromiumConfigurationTests(unittest.TestCase):
             artifact = Path(temporary) / "artifact"
             args = ["build_native.py", "--chromium-src", str(checkout), "--chromium-revision", CUSTOM,
                     "--out", str(out), "--build", "--target-os", "mac", "--target-cpu", "arm64", "--artifact-dir", str(artifact)]
-            with patch.object(sys, "argv", args), patch.object(build, "checked", return_value=CUSTOM), patch.object(build.platform, "system", return_value="Darwin"), patch.object(build, "tool", side_effect=lambda name:name), patch.object(build.shutil, "which", return_value=None), patch.object(build.subprocess, "run") as run, contextlib.redirect_stdout(io.StringIO()):
+            with patch.object(sys, "argv", args), patch.object(build, "checked", return_value=CUSTOM), patch.object(build.platform, "system", return_value="Darwin"), patch.object(build, "tool", side_effect=lambda name:name), patch.object(build.shutil, "which", return_value=None), patch.object(build.windows7_profile, "apply", return_value=[]), patch.object(build.subprocess, "run") as run, contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(build.main(), 0)
             gn = run.call_args_list[0].args[0]
             self.assertIn(f'mojo_rs_chromium_commit="{CUSTOM}"', next(x for x in gn if x.startswith("--args=")))

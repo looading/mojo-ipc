@@ -35,9 +35,9 @@ bool MojoRsWindows7CompatSmoke() {
   OSVERSIONINFOEXW version{};
   version.dwOSVersionInfoSize = sizeof(version);
   if (!version_fn || version_fn(&version) != 0) return false;
-  std::printf("windows native host: major=%lu minor=%lu build=%lu service_pack=%u\n",
+  std::printf("windows native host: major=%lu minor=%lu build=%lu service_pack=%u product_type=%u\n",
               version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber,
-              static_cast<unsigned>(version.wServicePackMajor));
+              static_cast<unsigned>(version.wServicePackMajor), static_cast<unsigned>(version.wProductType));
 
   FILETIME before{}, current{}, after{};
   ::GetSystemTimeAsFileTime(&before);
